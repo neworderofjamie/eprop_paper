@@ -1,0 +1,16 @@
+Algorithm,Num hidden LIF neurons,Timesteps,Batch time [ms],Forward time [ms],Backward time [ms],Optimiser time [ms]
+BPTT (PyTorch),256,343,926,107,700,110
+BPTT (PyTorch),512,343,1660,110,1300,236
+BPTT (PyTorch),1024,343,3240,210,2600,410
+BPTT (PyTorch),256,685,3400,280,2900,210
+BPTT (PyTorch),512,685,6300,300,5560,440
+BPTT (PyTorch),256,1370,12800,450,11900,400
+eProp (GeNN),256,343,1257,,,
+eProp (GeNN),512,343,3104,,,
+eProp (GeNN),1024,343,8693,,,
+eProp (GeNN),256,685,2490,,,
+eProp (GeNN),512,685,6190,,,
+eProp (GeNN),1024,685,17298,,,
+eProp (GeNN),256,1370,4960,,,
+eProp (GeNN),512,1370,12331,,,
+eProp (GeNN),1024,1370,34571,,,
