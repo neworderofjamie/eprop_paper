@@ -29,7 +29,7 @@ axis.set_yscale("log", basey=2)
 axis.xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
 axis.yaxis.set_major_formatter(mticker.ScalarFormatter())
 axis.set_xlabel("Num GPUs")
-axis.set_ylabel("Reciprocol training time")
+axis.set_ylabel("Reciprocol training time [minute$^{-1}$]")
 
 fig.legend(device_actors, devices, loc="lower center", ncol=2)
 fig.tight_layout(pad=0, rect=[0.0, 0.075, 1.0, 1.0])
