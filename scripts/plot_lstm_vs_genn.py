@@ -31,4 +31,6 @@ axes[1].set_ylabel("Energy Delay Product [uJs]")
 fig.legend([lstm_actor, genn_actor], ["LSTM (TF)", "LSNN (GeNN)"], 
            loc="lower center", ncol=2)
 fig.tight_layout(pad=0, h_pad=1.0, rect=[0.0, 0.075, 1.0, 1.0])
+if not plot_settings.presentation:
+    fig.savefig("../figures/lstm_vs_genn.eps")
 plt.show()

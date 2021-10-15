@@ -33,4 +33,6 @@ axis.set_ylabel("Reciprocol training time [minute$^{-1}$]")
 
 fig.legend(device_actors, devices, loc="lower center", ncol=2)
 fig.tight_layout(pad=0, rect=[0.0, 0.075, 1.0, 1.0])
+if not plot_settings.presentation:
+    fig.savefig("../figures/multi_gpu.eps")
 plt.show()
