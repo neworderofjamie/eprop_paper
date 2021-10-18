@@ -29,10 +29,15 @@ axes[1].set_xlabel("Batch size")
 axes[0].set_ylabel("Batch time [ms]")
 axes[1].set_ylabel("EDP [uJs]")
 
+# Remove axis junk
+for a in axes:
+    sns.despine(ax=a)
+    a.xaxis.grid(False)
+    
 fig.align_ylabels([axes[0], axes[1]])
 fig.legend([lstm_actor, genn_actor, loihi_actor], ["LSTM (TF)", "LSNN (GeNN)", "LSSN (Loihi)"], 
            loc="lower center", ncol=3)
-fig.tight_layout(pad=0, h_pad=1.0, rect=[0.0, 0.075, 1.0, 1.0])
+fig.tight_layout(pad=0, h_pad=1.0, rect=[0.0, 0.0 if plot_settings.presentation else 0.075, 1.0, 1.0])
 if not plot_settings.presentation:
     fig.savefig("../figures/lstm_vs_genn.eps")
 plt.show()

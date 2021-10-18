@@ -2,6 +2,7 @@ from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import plot_settings
+import seaborn as sns
 
 # Load data
 data = read_csv("multi_gpu.csv", delimiter=",")
@@ -31,8 +32,11 @@ axis.yaxis.set_major_formatter(mticker.ScalarFormatter())
 axis.set_xlabel("Num GPUs")
 axis.set_ylabel("Reciprocol training time [minute$^{-1}$]")
 
+# Remove axis junk
+sns.despine(ax=axis)
+
 fig.legend(device_actors, devices, loc="lower center", ncol=2)
-fig.tight_layout(pad=0, rect=[0.0, 0.075, 1.0, 1.0])
+fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.075, 1.0, 1.0])
 if not plot_settings.presentation:
     fig.savefig("../figures/multi_gpu.eps")
 plt.show()
