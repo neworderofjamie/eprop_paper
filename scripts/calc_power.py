@@ -9,18 +9,22 @@ num_axis = int(np.ceil(np.sqrt(len(power_traces))))
 fig, axes = plt.subplots(num_axis, num_axis)
 
 for trace, ax in zip(power_traces, axes.flatten()):
-    power = []
-    with open(trace, "r") as f:
-        lines=f.readlines()
-        for line in lines:
-            try:
-                power.append(float(line.split(',')[1].split('W')[0]))
-            except:
-                print("Error parsing '%s'" % line)
-    
-    
-    # Convert to numpy
-    power = np.asarray(power)
+    if "genn_cpu" in trace:
+        power = np.loadtxt(trace, skiprows=1, delimiter=",", usecols=(5,))
+        print(power.shape)
+    else:
+        power = []
+        with open(trace, "r") as f:
+            lines=f.readlines()
+            for line in lines:
+                try:
+                    power.append(float(line.split(',')[1].split('W')[0]))
+                except:
+                    print("Error parsing '%s'" % line)
+        
+        
+        # Convert to numpy
+        power = np.asarray(power)
     
     # Calculate gradient
     gradient = np.gradient(power)
@@ -28,6 +32,7 @@ for trace, ax in zip(power_traces, axes.flatten()):
     # Find maximum and minimum gradient which should represent start and end of experiment
     experiment_start = np.argmax(gradient)
     experiment_end = np.argmin(gradient)
+
     assert experiment_start < experiment_end
     
     # Calcualte average power
