@@ -52,74 +52,90 @@ class Config(object):
         return 100.0 * (num_correct / num_trials)
 
 
-configs = [Config("256 neurons", 
-                  [("eProp FF", "shd_256_feedforward"), ("eProp RC", "shd_256")],
-                  [Performance("BPTT FF*", 74.0, 1.7), Performance("BPTT RC*", 80.0, 2.0)]),
-           Config("512 neurons", 
-                  [("eProp FF", "shd_512_feedforward"), ("eProp RC", "shd_512")],
-                  []),
-           Config("1024 neurons", 
-                  [("eProp FF", "shd_1024_feedforward"), ("eProp RC", "shd_1024")],
-                  [])]
+def plot(configs):
+    pal = sns.color_palette()
+    colour_map = {}
 
+    bar_x = []
+    bar_height = []
+    bar_colour = []
+    bar_error = []
+    group_x = []
 
-pal = sns.color_palette()
-colour_map = {}
+    tick_label = []
 
-bar_x = []
-bar_height = []
-bar_colour = []
-bar_error = []
-group_x = []
-
-tick_label = []
-
-# Loop through configurations
-last_x = 0.0
-for c in configs:
-    # Calculate centre of this group
-    group_centre = ((len(c.performances) - 1) / 2.0) * (BAR_PAD + BAR_WIDTH)
-    group_x.append(last_x + group_centre)
-    
-    # Loop through all performances achieved in this config
-    for p in c.performances:
-        # Assign this performance record a colour based on its name
-        if p.name in colour_map:
-            colour = colour_map[p.name]
-        else:
-            colour = pal[len(colour_map)]
-            colour_map[p.name] = colour
-
-        # Add testing bar
-        bar_x.append(last_x)
-        bar_height.append(p.test_mean)
-        bar_colour.append(colour)
-        bar_error.append(p.test_sd)
+    # Loop through configurations
+    last_x = 0.0
+    for c in configs:
+        # Calculate centre of this group
+        group_centre = ((len(c.performances) - 1) / 2.0) * (BAR_PAD + BAR_WIDTH)
+        group_x.append(last_x + group_centre)
         
-        # Use name for tick
-        tick_label.append(p.name)
-        
-        # Add spacing between bars
-        last_x += (BAR_WIDTH + BAR_PAD)
-        
-    # Add extra padding between groups
-    last_x += (GROUP_PAD - BAR_PAD)
+        # Loop through all performances achieved in this config
+        for p in c.performances:
+            # Assign this performance record a colour based on its name
+            if p.name in colour_map:
+                colour = colour_map[p.name]
+            else:
+                colour = pal[len(colour_map)]
+                colour_map[p.name] = colour
 
-fig, axis = plt.subplots()
-actors = axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error, color=bar_colour)
+            # Add testing bar
+            bar_x.append(last_x)
+            bar_height.append(p.test_mean)
+            bar_colour.append(colour)
+            bar_error.append(p.test_sd)
+            
+            # Use name for tick
+            tick_label.append(p.name)
+            
+            # Add spacing between bars
+            last_x += (BAR_WIDTH + BAR_PAD)
+            
+        # Add extra padding between groups
+        last_x += (GROUP_PAD - BAR_PAD)
 
-axis.set_xticks(group_x)
-axis.set_xticklabels([c.name for c in configs], ha="center")
-axis.set_ylabel("Accuracy [%]")
-axis.set_ylim((0, 100.0))
+    fig, axis = plt.subplots()
+    actors = axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error, color=bar_colour)
 
-# Remove axis junk
-sns.despine(ax=axis)
-axis.xaxis.grid(False)
+    axis.set_xticks(group_x)
+    axis.set_xticklabels([c.name for c in configs], ha="center")
+    axis.set_ylabel("Accuracy [%]")
+    axis.set_ylim((0, 100.0))
 
-fig.legend([mpatches.Rectangle(color=c, width=10, height=10, xy=(0,0)) for c in itervalues(colour_map)], 
-           iterkeys(colour_map), loc="lower center", ncol=len(colour_map))
-fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.075, 1.0, 1.0])
+    # Remove axis junk
+    sns.despine(ax=axis)
+    axis.xaxis.grid(False)
+
+    fig.legend([mpatches.Rectangle(color=c, width=10, height=10, xy=(0,0)) for c in itervalues(colour_map)], 
+               iterkeys(colour_map), loc="lower center", ncol=len(colour_map))
+    fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.075, 1.0, 1.0])
+    return fig
+
+
+shd_configs = [Config("256 neurons", 
+                     [("eProp FF", "shd_256_feedforward"), ("eProp RC", "shd_256")],
+                     [Performance("BPTT LIF FF*", 74.0, 1.7), Performance("BPTT LIF RC*", 80.0, 2.0)]),
+              Config("512 neurons", 
+                     [("eProp FF", "shd_512_feedforward"), ("eProp RC", "shd_512")],
+                     []),
+              Config("1024 neurons", 
+                     [("eProp FF", "shd_1024_feedforward"), ("eProp RC", "shd_1024")],
+                     [])]
+
+smnist_configs = [Config("256 neurons", 
+                         [("eProp RC", "smnist_256")],
+                         [Performance("BPTT LSNN RC*", 96.4, 0.0), Performance("BPTT LIF RC*", 63.3, 0.0)]),
+                  Config("512 neurons", 
+                         [("eProp RC", "smnist_512")],
+                         []),
+                  Config("1024 neurons", 
+                         [("eProp RC", "smnist_1024")],
+                         [])]
+
+shd_fig = plot(shd_configs)
+smnist_fig = plot(smnist_configs)
 if not plot_settings.presentation:
-    fig.savefig("../figures/performance.eps")
+    shd_fig.savefig("../figures/shd_performance.eps")
+    smnist_fig.savefig("../figures/shd_performance.eps")
 plt.show()
