@@ -109,7 +109,7 @@ class DataLoader:
             self._labels[i] = label
 
             # Preprocess events 
-            preproc_events = self._preprocess(events, dataset.dtype, 
+            preproc_events = self._preprocess(events, dataset.ordering, 
                                               sensor_size)
 
             # Update max spike times and max spikes per stimuli
@@ -161,33 +161,33 @@ class DataLoader:
     def __len__(self):
         return int(np.ceil(self.length / float(self.batch_size)))
 
-    def _preprocess(self, events, dtype, sensor_size):
+    def _preprocess(self, events, ordering, sensor_size):
         # Calculate cumulative sum of each neuron's spike count
         num_input_neurons = np.product(sensor_size) 
 
         # Check dataset datatype includes time and polarity
-        assert "t" in dtype.names
-        assert "p" in dtype.names
+        assert "t" in ordering
+        assert "p" in ordering
 
         # If sensor has single polarity
         if sensor_size[2] == 1:
             # If sensor is 2D, flatten x and y into event IDs
-            if ("x" in dtype.names) and ("y" in dtype.names):
+            if ("x" in ordering) and ("y" in ordering):
                 spike_event_ids = events["x"] + (events["y"] * sensor_size[1])
             # Otherwise, if it's 1D, simply use X
-            elif "x" in dtype.names:
+            elif "x" in ordering:
                 spike_event_ids = events["x"]
             else:
                 raise "Only 1D and 2D sensors supported"
         # Otherwise
         else:
             # If sensor is 2D, flatten x, y and p into event IDs
-            if ("x" in dtype.names) and ("y" in dtype.names):
+            if ("x" in ordering) and ("y" in ordering):
                 spike_event_ids = (events["p"] +
                                    (events["x"] * sensor_size[2]) + 
                                    (events["y"] * sensor_size[1] * sensor_size[2]))
             # Otherwise, if it's 1D, flatten x and p into event IDs
-            elif "x" in dtype.names:
+            elif "x" in ordering:
                 spike_event_ids = events["p"] + (events["x"] * sensor_size[2])
             else:
                 raise "Only 1D and 2D sensors supported"
