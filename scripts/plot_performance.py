@@ -26,11 +26,11 @@ class Config(object):
         # Loop through experiment files
         for name, file_prefix in experiment_files:
             # Find all directories containing runs of this experiment
-            data_directories = glob(file_prefix + "_100_epochs_*")
+            data_directories = glob(os.path.join("performance_data", file_prefix + "_100_epochs_*"))
             
             # Read test performance
             test_performance = [self._get_test_performance(d) for d in data_directories]
-            
+
             ## Add performance tuple
             self.performances.append(Performance(name, np.mean(test_performance), np.std(test_performance)))
     
