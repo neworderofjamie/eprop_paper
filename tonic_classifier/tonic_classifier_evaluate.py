@@ -205,6 +205,7 @@ model.dT = args.dt
 model.timing_enabled = args.timing
 model.batch_size = args.batch_size
 model._model.set_seed(args.seed)
+model._model.set_fuse_postsynaptic_models(True)
 
 # Add neuron populations
 input = model.add_neuron_population("Input", num_input_neurons, "SpikeSourceArray",
