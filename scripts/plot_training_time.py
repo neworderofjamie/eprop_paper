@@ -47,7 +47,7 @@ for i, (ax, n) in enumerate(zip(axes, pytorch_data.index)):
     ax.xaxis.grid(False)
 
 axes[0].set_ylabel("Batch time [ms]")
-fig.legend([genn_actor, pytorch_actor], ["GeNN (eProp)", "PyTorch (BPTT)"], loc="lower center", ncol=2)
+fig.legend([genn_actor, pytorch_actor], ["GeNN (eProp LSNN RC)", "PyTorch (BPTT LIF RC)"], loc="lower center", ncol=2)
 fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.075, 1.0, 1.0])
 if not plot_settings.presentation:
     fig.savefig("../figures/training_time.eps")

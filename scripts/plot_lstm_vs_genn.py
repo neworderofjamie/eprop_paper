@@ -57,26 +57,26 @@ fig.add_subplot(batch_n_edp_axis)
 pal = sns.color_palette()
 lstm_gpu_actor = batch_n_latency_axis.plot(lstm_batch_n_data["Batch size"], 
                                            lstm_batch_n_data["Latency per batch [ms]"], 
-                                           color=pal[0], marker="x")[0]
+                                           color=pal[1], marker="x")[0]
 genn_gpu_actor = batch_n_latency_axis.plot(genn_batch_n_data["Batch size"], 
                                            genn_batch_n_data["Latency per batch [ms]"], 
-                                           color=pal[1], marker="x")[0]
+                                           color=pal[2], marker="x")[0]
 
 batch_n_edp_axis.plot(lstm_batch_n_data["Batch size"], 
                       lstm_batch_n_data["Energy Delay Product (uJs)"], 
-                      color=pal[0], marker="x")[0]
+                      color=pal[1], marker="x")[0]
 batch_n_edp_axis.plot(genn_batch_n_data["Batch size"], 
                       genn_batch_n_data["Energy Delay Product (uJs)"], 
-                      color=pal[1], marker="x")[0]
+                      color=pal[2], marker="x")[0]
 
 # Plot bars for various batch size 1 things
 bar_x = list(range(5))
 
-bar_data_frames = [(lstm_batch_1_data, "LSTM (TF GPU)"), 
-                   (genn_batch_1_data, "LSNN (GeNN GPU)"),
-                   (loihi_data, "LSNN (Loihi)*"),
-                   (genn_cpu_data, "LSNN (GeNN CPU)"),
-                   (tf_cpu_data, "LSTM (TF CPU)*")]
+bar_data_frames = [(tf_cpu_data, "TensorFlow CPU\n(LSTM RC)*"),
+                   (lstm_batch_1_data, "TensorFlow GPU\n(LSTM RC)"), 
+                   (genn_batch_1_data, "GeNN GPU\n(LSNN RC)"),
+                   (genn_cpu_data, "GeNN CPU\n(LSNN RC)"),
+                   (loihi_data, "Loihi\n(LSNN RC)*")]
 latency_bar_height = [f["Latency per batch [ms]"].iloc[0] for f,_ in bar_data_frames]
 edp_bar_height = [f["Energy Delay Product (uJs)"].iloc[0] for f,_ in bar_data_frames]
 bar_colours = [pal[i] for i,_ in enumerate(bar_data_frames)]
@@ -85,7 +85,7 @@ batch_1_latency_axis.bar(bar_x, latency_bar_height, 0.8, color=bar_colours)
 batch_1_edp_axis.bar(bar_x, edp_bar_height, 0.8, color=bar_colours)
 
 batch_1_edp_axis.set_xticks(bar_x)
-batch_1_edp_axis.set_xticklabels([n for _, n in bar_data_frames], rotation=90)
+batch_1_edp_axis.set_xticklabels([n for _, n in bar_data_frames], rotation=90, ma="right")
 
 
 batch_n_edp_axis.set_xlabel("Batch size")
@@ -108,9 +108,9 @@ remove_axis_junk(batch_n_edp_axis)
     
 fig.align_ylabels([batch_1_latency_axis, batch_1_edp_axis])
 fig.legend([lstm_gpu_actor, genn_gpu_actor], 
-           ["LSTM (TF GPU)", "LSNN (GeNN GPU)"], 
+           ["TensorFlow GPU (LSTM RC)", "GeNN GPU (LSNN RC)"], 
            loc="lower center", ncol=2, bbox_to_anchor=(0.625, 0.325))
-fig.tight_layout(pad=0, w_pad=0.5, rect=[0.0, 0.0, 1.0, 1.0])
+fig.tight_layout(pad=0, w_pad=0.5, rect=[0.0, 0.02, 1.0, 1.0])
 if not plot_settings.presentation:
     fig.savefig("../figures/lstm_vs_genn.eps")
 plt.show()

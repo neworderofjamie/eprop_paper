@@ -114,23 +114,23 @@ def plot(configs):
 
 
 shd_configs = [Config("256 neurons", 
-                     [("eProp FF", "shd_256_feedforward"), ("eProp RC", "shd_256")],
-                     [Performance("BPTT LIF FF*", 74.0, 1.7), Performance("BPTT LIF RC*", 80.0, 2.0)]),
+                     [("GeNN (eProp LSNN FF)", "shd_256_feedforward"), ("GeNN (eProp LSNN RC)", "shd_256")],
+                     [Performance("PyTorch (BPTT LIF FF)*", 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)*", 80.0, 2.0)]),
               Config("512 neurons", 
-                     [("eProp FF", "shd_512_feedforward"), ("eProp RC", "shd_512")],
+                     [("GeNN (eProp LSNN FF)", "shd_512_feedforward"), ("GeNN (eProp LSNN RC)", "shd_512")],
                      []),
               Config("1024 neurons", 
-                     [("eProp FF", "shd_1024_feedforward"), ("eProp RC", "shd_1024")],
+                     [("GeNN (eProp LSNN FF)", "shd_1024_feedforward"), ("GeNN (eProp LSNN RC)", "shd_1024")],
                      [])]
 
 smnist_configs = [Config("256 neurons", 
-                         [("eProp RC", "smnist_256")],
-                         [Performance("BPTT LSNN RC*", 96.4, 0.0), Performance("BPTT LIF RC*", 63.3, 0.0)]),
+                         [("GeNN (eProp LSNN RC)", "smnist_256")],
+                         [Performance("TensorFlow (BPTT LSNN RC)*", 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)*", 63.3, 0.0)]),
                   Config("512 neurons", 
-                         [("eProp RC", "smnist_512")],
+                         [("GeNN (eProp LSNN RC)", "smnist_512")],
                          []),
                   Config("1024 neurons", 
-                         [("eProp RC", "smnist_1024")],
+                         [("GeNN (eProp LSNN RC)", "smnist_1024")],
                          [])]
 
 shd_fig = plot(shd_configs)
