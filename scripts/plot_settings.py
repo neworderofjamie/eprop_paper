@@ -18,5 +18,5 @@ sns.set_context(rc={"lines.markeredgewidth": 1.0})
 # Set palette
 sns.set_palette("deep")
 
-column_width = 3.275
-double_column_width = 6.75
+column_width = 3.333
+double_column_width = 7.0
