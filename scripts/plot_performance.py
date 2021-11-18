@@ -95,7 +95,7 @@ def plot(configs):
         # Add extra padding between groups
         last_x += (GROUP_PAD - BAR_PAD)
 
-    fig, axis = plt.subplots()
+    fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.5))
     actors = axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error, color=bar_colour)
 
     axis.set_xticks(group_x)
@@ -108,8 +108,8 @@ def plot(configs):
     axis.xaxis.grid(False)
 
     fig.legend([mpatches.Rectangle(color=c, width=10, height=10, xy=(0,0)) for c in itervalues(colour_map)], 
-               iterkeys(colour_map), loc="lower center", ncol=len(colour_map))
-    fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.075, 1.0, 1.0])
+               iterkeys(colour_map), loc="lower center", ncol=len(colour_map) if plot_settings.presentation else 2)
+    fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.2, 1.0, 1.0])
     return fig
 
 
@@ -136,6 +136,6 @@ smnist_configs = [Config("256 neurons",
 shd_fig = plot(shd_configs)
 smnist_fig = plot(smnist_configs)
 if not plot_settings.presentation:
-    shd_fig.savefig("../figures/shd_performance.eps")
-    smnist_fig.savefig("../figures/shd_performance.eps")
+    shd_fig.savefig("../figures/shd_performance.pdf")
+    smnist_fig.savefig("../figures/smnist_performance.pdf")
 plt.show()
