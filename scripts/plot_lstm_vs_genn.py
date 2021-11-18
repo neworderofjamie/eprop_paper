@@ -31,7 +31,7 @@ genn_batch_1_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)
 assert len(lstm_batch_1_data) == 1
 assert len(genn_batch_1_data) == 1
 
-fig = plt.figure()
+fig = plt.figure(figsize=(plot_settings.double_column_width, 3.0))
 
 
 # Create outer gridspec to divide figure into 4 columns
@@ -109,8 +109,8 @@ remove_axis_junk(batch_n_edp_axis)
 fig.align_ylabels([batch_1_latency_axis, batch_1_edp_axis])
 fig.legend([lstm_gpu_actor, genn_gpu_actor], 
            ["TensorFlow GPU (LSTM RC)", "GeNN GPU (LSNN RC)"], 
-           loc="lower center", ncol=2, bbox_to_anchor=(0.625, 0.325))
+           loc="lower center", ncol=2, bbox_to_anchor=(0.625, 0.325) if plot_settings.presentation else (0.625, 0.1))
 fig.tight_layout(pad=0, w_pad=0.5, rect=[0.0, 0.02, 1.0, 1.0])
 if not plot_settings.presentation:
-    fig.savefig("../figures/lstm_vs_genn.eps")
+    fig.savefig("../figures/lstm_vs_genn.pdf")
 plt.show()
