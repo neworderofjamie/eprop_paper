@@ -13,7 +13,7 @@ num_neurons = data["Num hidden neurons"].unique()
 timesteps = data["Timesteps"].unique()
 
 # Create an axis for each model size
-fig, axes = plt.subplots(1, len(num_neurons), sharey=True)
+fig, axes = plt.subplots(1, len(num_neurons), sharey=True, figsize=(plot_settings.column_width, 2.5))
 
 # Extract PyTorch and GeNN data
 pytorch_data = data[data["Algorithm"] == "BPTT (PyTorch)"]
@@ -48,7 +48,7 @@ for i, (ax, n) in enumerate(zip(axes, pytorch_data.index)):
 
 axes[0].set_ylabel("Batch time [ms]")
 fig.legend([genn_actor, pytorch_actor], ["GeNN (eProp LSNN RC)", "PyTorch (BPTT LIF RC)"], loc="lower center", ncol=2)
-fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.075, 1.0, 1.0])
+fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.15, 1.0, 1.0])
 if not plot_settings.presentation:
-    fig.savefig("../figures/training_time.eps")
+    fig.savefig("../figures/training_time.pdf")
 plt.show()
