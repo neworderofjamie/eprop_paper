@@ -38,6 +38,7 @@
 \documentclass[sigconf,authordraft]{acmart}
 
 \usepackage{blindtext}
+\usepackage{siunitx}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -204,9 +205,8 @@ author's own version, with {\itshape very} few changes to the source.
 \begin{figure}[t]
   \centering
   \includegraphics{figures/shd_performance.pdf}
-  \caption{1907 Franklin Model D roadster. Photograph by Harris \&
-    Ewing, Inc. [Public domain], via Wikimedia
-    Commons. (\url{https://goo.gl/VLCRBB}).}
+  \caption{Comparison of performance on Heidelberg Spiking Digits datasets of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a}.
+  Bars signify the mean and error bars the standard deviation over 5~(GeNN) and 10~(PyTorch) simulations.}
   \Description{A woman and a girl in white dresses sit in an open car.}
   \label{fig:shd_performance}
 \end{figure}
@@ -229,6 +229,15 @@ author's own version, with {\itshape very} few changes to the source.
 \blindtext
 
 \section{Results}
+\subsection{Accuracy}
+We trained LSNNs of various sizes with both feedforward and recurrent connectivity on the Heidelberg Spiking Digits~\citep{Cramer2020} dataset using eProp with the default parameters employed by \citet{Bellec2020}.
+In figure~\ref{fig:shd_performance} we compare the performance of these models with the results obtained by \citet{Zenke2021a}.
+There is no significant (TODO suitable significance test?) different between the performance of the \num{256} neuron models and, because the reduced memory requirement of our eProp implementation allows larger models to be trained, we show that the performance can be significantly improved by increasing the number of neurons to \num{512}.
+
+\subsection{Training performance}
+
+
+\subsection{Inference performance}
 \blindtext
 
 \section{Conclusions}
