@@ -13,7 +13,7 @@ num_neurons = data["Num hidden neurons"].unique()
 timesteps = data["Timesteps"].unique()
 
 # Create an axis for each model size
-fig, axes = plt.subplots(1, len(num_neurons), sharey=True, figsize=(plot_settings.column_width, 2.5))
+fig, axes = plt.subplots(1, len(num_neurons), sharey=True, figsize=(plot_settings.column_width, 2.0))
 
 # Extract PyTorch and GeNN data
 pytorch_data = data[data["Algorithm"] == "BPTT (PyTorch)"]

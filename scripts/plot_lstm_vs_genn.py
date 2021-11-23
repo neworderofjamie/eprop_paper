@@ -31,7 +31,7 @@ genn_batch_1_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)
 assert len(lstm_batch_1_data) == 1
 assert len(genn_batch_1_data) == 1
 
-fig = plt.figure(figsize=(plot_settings.double_column_width, 3.0))
+fig = plt.figure(figsize=(plot_settings.double_column_width, 2.5))
 
 
 # Create outer gridspec to divide figure into 4 columns

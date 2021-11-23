@@ -95,7 +95,7 @@ def plot(configs):
         # Add extra padding between groups
         last_x += (GROUP_PAD - BAR_PAD)
 
-    fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.5))
+    fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
     actors = axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error, color=bar_colour)
 
     axis.set_xticks(group_x)
