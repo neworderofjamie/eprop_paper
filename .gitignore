@@ -1,3 +1,8 @@
 /tonic_classifier/data/
 /**/__pycache__
 /**/*_CODE
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
