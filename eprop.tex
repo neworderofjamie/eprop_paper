@@ -37,8 +37,7 @@
 %% The first command in your LaTeX source must be the \documentclass command.
 \documentclass[sigconf,authordraft]{acmart}
 
-\usepackage{blindtext}
-\usepackage{siunitx}
+\usepackage[binary-units]{siunitx}
 
 % Visible TODO notes
 \newcommand{\todo}[1]{\textbf{\textsc{\textcolor{red}{(TODO: #1)}}}}
@@ -179,12 +178,12 @@ One such approach is to replace the non-differentiable `transfer function' of a 
 While BPTT is computationally efficient, because it requires gradients to be stored during the forward pass in order for them to be applied during a backward pass, it has a memory requirement which grows with time preventing it from being applied to long input sequences or used online.
 RTRL~\citep{Williams1989} is an alternative `forward mode' algorithm for training RNNs but, in its general form it is too computationally expensive to be practical.
 However, if the flow of gradients through the `explicit' recurrent connections is ignored and only those flowing through the `implicit' recurrence within each spiking neuron are considered, much more computationally tractable learning rules can be derived~\citep{Zenke2021}.
-Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2018} and Decolle~\todo{cite}.
+Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2018} and Decolle~\citep{Kaiser2020}.
 
-However, in order to apply new spike-based machine learning techniques to larger models and data-sets as well as prototyping algorithms for neuromorphic hardware~\todo{cite}, new tools are required which can efficiently simulate SNNs on existing hardware. 
+However, in order to apply new spike-based machine learning techniques to larger models and data-sets as well as prototyping algorithms for neuromorphic hardware~\citep{Davies2018,Furber2014,Merolla2014}, new tools are required which can efficiently simulate SNNs on existing hardware. 
 The development of efficient SNN simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016} but, these simulators \todo{more}, making them ill-suited for spike-based machine learning research.
 As such, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly, eshraghian2021training,Hazan2018} on top of more familiar tools such as PyTorch.
-However, while PyTorch is highly-optimised for rate-based models, it does not take advantage of the spatio-temporal sparsity of SNNs which have the potential to enable massive computational savings over rate-based networks~\todo{cite sander}.
+However, while PyTorch is highly-optimised for rate-based models, it does not take advantage of the spatio-temporal sparsity of SNNs which have the potential to enable massive computational savings over rate-based networks~\citep{Yin2021}.
 
 While our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021} was originally developed for Computational Neuroscience research, its longstanding focus on flexibility and targetting of GPU accelerators makes it well-suited to the needs of spike-based ML.
 Here we demonstrate this by training SNN classifiers on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
@@ -198,26 +197,21 @@ In section~\ref{sec:accuracy} we compare the trained performance of these classi
   \caption{1907 Franklin Model D roadster. Photograph by Harris \&
     Ewing, Inc. [Public domain], via Wikimedia
     Commons. (\url{https://goo.gl/VLCRBB}).}
-  \Description{A woman and a girl in white dresses sit in an open car.}
   \label{fig:lstm_vs_genn}
 \end{figure*}
 
 \begin{figure}[t]
   \centering
   \includegraphics{figures/shd_performance.pdf}
-  \caption{Comparison of performance on Heidelberg Spiking Digits datasets of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a}.
+  \caption{Comparison of performance on Spiking Heidelberg Digits dataset of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a}.
   Bars signify the mean and error bars the standard deviation over 5~(GeNN) and 10~(PyTorch) simulations.}
-  \Description{A woman and a girl in white dresses sit in an open car.}
   \label{fig:shd_performance}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics{figures/training_time.pdf}
-  \caption{1907 Franklin Model D roadster. Photograph by Harris \&
-    Ewing, Inc. [Public domain], via Wikimedia
-    Commons. (\url{https://goo.gl/VLCRBB}).}
-  \Description{A woman and a girl in white dresses sit in an open car.}
+  \caption{Comparison of training times on Spiking Heidelberg Digits dataset of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch. All experiments are performed on a \SI{12}{\giga\byte} Titan V GPU. The input spike trains are binned into different numbers of timesteps. Missing bars indicate that GPU had insufficient memory for experiment.}
   \label{fig:training_time}
 \end{figure}
 
