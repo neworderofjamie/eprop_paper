@@ -204,7 +204,7 @@ In section~\ref{sec:accuracy} we compare the trained performance of these classi
 \begin{figure}[t]
   \centering
   \includegraphics{figures/shd_performance.pdf}
-  \caption{Comparison of performance on Spiking Heidelberg Digits dataset of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a}.
+  \caption{Performance comparison of  LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a} on Spiking Heidelberg Digits dataset.
   Bars signify the mean and error bars the standard deviation over 5~(GeNN) and 10~(PyTorch) simulations.}
   \label{fig:shd_performance}
 \end{figure}
@@ -212,7 +212,7 @@ In section~\ref{sec:accuracy} we compare the trained performance of these classi
 \begin{figure}[t]
   \centering
   \includegraphics{figures/training_time.pdf}
-  \caption{Comparison of training times on Spiking Heidelberg Digits dataset of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch. All experiments are performed on a \SI{12}{\giga\byte} Titan V GPU. The input spike trains are binned into different numbers of timesteps. Missing bars indicate that GPU had insufficient memory for experiment.}
+  \caption{Training times comparison of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch on Spiking Heidelberg Digits dataset. A \SI{12}{\giga\byte} Titan V GPU is used for all experiments. Input spike trains are binned to achieve different numbers of timesteps. Missing bars indicate insufficient memory for experiment.}
   \label{fig:training_time}
 \end{figure}
 
@@ -228,7 +228,7 @@ There is no significant \todo{suitable significance test?} different between the
 \label{sec:training_time}
 While being able to train networks with high classification accuracy is important, training also needs to fast.
 In figure~\ref{fig:training_time} we compare the time taken to train recurrent LSNNs using eProp with GeNN against recurrent LIF networks training using BPTT with PyTorch.
-\todo{analysis}
+When using short input sequences, training using GeNN is slower (probably due to PyTorch's use of our GPU's tensor cores) but, as sequence length increases, GeNN becomes faster and the memory requirements of BPTT mean that PyTorch is unable to train models larger than \num{256} neurons on \num{1370} timestep input sequences.
 
 \subsection{Inference time}
 \label{sec:inference_time}
