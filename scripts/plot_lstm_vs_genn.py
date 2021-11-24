@@ -31,15 +31,19 @@ genn_batch_1_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)
 assert len(lstm_batch_1_data) == 1
 assert len(genn_batch_1_data) == 1
 
-fig = plt.figure(figsize=(plot_settings.double_column_width, 2.5))
+fig = plt.figure(figsize=(plot_settings.column_width, 2.5))
 
 
 # Create outer gridspec to divide figure into 4 columns
 gsp = gs.GridSpec(1, 4)
 
 # Divide first column and remaining 3 columns into two rows
-batch_1_gs = gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[0])
-batch_n_gs =  gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[1:])
+if plot_settings.presentation:
+    batch_1_gs = gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[0])
+    batch_n_gs =  gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[1:])
+else:
+    batch_1_gs = gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[0:2])
+    batch_n_gs =  gs.GridSpecFromSubplotSpec(2, 1, subplot_spec=gsp[2:])
 
 # Create axes for each gridspec
 batch_1_latency_axis = plt.Subplot(fig, batch_1_gs[0])
@@ -108,8 +112,9 @@ remove_axis_junk(batch_n_edp_axis)
     
 fig.align_ylabels([batch_1_latency_axis, batch_1_edp_axis])
 fig.legend([lstm_gpu_actor, genn_gpu_actor], 
-           ["TensorFlow GPU (LSTM RC)", "GeNN GPU (LSNN RC)"], 
-           loc="lower center", ncol=2, bbox_to_anchor=(0.625, 0.325) if plot_settings.presentation else (0.625, 0.1))
+           ["TensorFlow GPU\n(LSTM RC)", "GeNN GPU\n(LSNN RC)"], 
+           loc="lower center", ncol=2 if plot_settings.presentation else 1, 
+           bbox_to_anchor=(0.625, 0.325) if plot_settings.presentation else (0.77, -0.01))
 fig.tight_layout(pad=0, w_pad=0.5, rect=[0.0, 0.02, 1.0, 1.0])
 if not plot_settings.presentation:
     fig.savefig("../figures/lstm_vs_genn.pdf")
