@@ -186,9 +186,10 @@ The development of efficient SNN simulators has been a key area of computational
 As such, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly, eshraghian2021training,Hazan2018} on top of more familiar tools such as PyTorch.
 However, while libraries like PyTorch are highly-optimised for rate-based models, they does not take advantage of the spatio-temporal sparsity of SNNs which have the potential to enable massive computational savings over rate-based networks~\citep{Yin2021}.
 
-While our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021} was originally developed for Computational Neuroscience research, its longstanding focus on flexibility and its targeting of GPU accelerators make it well-suited to the needs of spike-based ML.
-\todo{talk about additions to GeNN}
-Here we demonstrate this by training SNN classifiers on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
+While our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021} was originally developed for Computational Neuroscience research, its longstanding focus on flexibility and its targeting of GPU accelerators has made it easily adaptable to the needs of spike-based ML.
+Specifically, we have added support for parallel batch simulation of models which allows multiple copies of the model to be run simultaneously to maximise GPU occupancy.
+We have also added support for user-defined ``custom update'' operations which can be used to implement a wide range of functionality including gradient-based optimizers, efficient matrix transpose operations and the reduction of variables across batches.
+In this paper we demonstrate how these new extensions can be used to efficiently implement and train SNN classifiers on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
 
 \begin{figure}[t]
   \centering
