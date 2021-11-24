@@ -173,9 +173,10 @@
 \maketitle
 
 \section{Introduction}
-In recent years, several new techniques for directly training spiking neural networks~(SNNs) have been developed.
-One approach to work around the problem of deriving gradients in spite of the discontinuity of the membrane potential during spikes is to replace the undefined derivative at the spike by a ``surrogate gradient''~\citep{Bohte2011,Bellec2018,Zenke2021a}, allowing SNNs to be trained with the same algorithms used to train rate-based Recurrent Neural Network~(RNNs) such as Back Propagation Through Time~(BPTT).
-While BPTT is computationally efficient -- because it requires gradients to be stored during the forward pass in order for them to be applied during a backward pass -- it has a memory requirement which grows with time preventing it from being applied to long input sequences or used online.
+In recent years, several new techniques for directly training spiking neural networks~(SNNs) using gradient-based approaches have been developed.
+The discontinuity of spiking neuron's membrane potentials when they emit a spike is problematic when deriving gradients.
+One approach to work around this problem is to replace the derivative of the membrane potential with a `surrogate gradient'~\citep{Bohte2011,Bellec2018,Zenke2021a}, allowing SNNs to be trained with the same algorithms used to train rate-based Recurrent Neural Network~(RNNs) such as Back Propagation Through Time~(BPTT).
+While BPTT is computationally efficient, because it requires gradients to be stored during the forward pass in order for them to be applied during a backward pass, it has a memory requirement which grows with time preventing it from being applied to long input sequences or used online.
 RTRL~\citep{Williams1989} is an alternative `forward mode' algorithm for training RNNs but, in its general form, it is too computationally expensive to be practical.
 However, if the gradients flowing through the `explicit' recurrent connections are ignored and only those flowing through the `implicit' recurrence represented by the dynamics of individual neurons are considered, much more computationally tractable learning rules can be derived~\citep{Zenke2021}.
 Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2018} and Decolle~\citep{Kaiser2020}.
