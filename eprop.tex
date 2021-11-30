@@ -217,7 +217,7 @@ In this paper we demonstrate how these new extensions can be used to efficiently
 
 \section{Results}
 We trained LSNNs of various sizes with feedforward and recurrent connectivity on the Spiking Heidelberg Digits~(SHD)~\citep{Cramer2020} and spiking sequential MNIST~\citep{Plank2021} datasets using eProp with the default parameters \citet{Bellec2020}.
-When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no clear differences \todo{suitable significance test?} for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
+When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no consicerable differences \todo{suitable significance test?} for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
 However, because the reduced memory requirement of eProp allows training larger models, we were  able to discover that the performance can be significantly improved by increasing the number of neurons to \num{512}.
 
 While being able to train networks with high classification accuracy is important, training also needs to be fast.
