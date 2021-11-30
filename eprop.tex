@@ -179,8 +179,7 @@ One approach to work around this problem is to replace the derivative of the mem
 While BPTT is computationally efficient, because it requires gradients to be stored during the forward pass in order for them to be applied during a backward pass, it has a memory requirement which grows with time preventing it from being applied to long input sequences or used online.
 RTRL~\citep{Williams1989} is an alternative `forward mode' algorithm for training RNNs but, in its general form, it is too computationally expensive to be practical.
 However, if the gradients flowing through the `explicit' recurrent connections are ignored and only those flowing through the `implicit' recurrence represented by the dynamics of individual neurons are considered, much more computationally tractable learning rules can be derived~\citep{Zenke2021}.
-Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2018} and Decolle~\citep{Kaiser2020}.
-\todo{some background on spike-time based learning}
+Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2020} and Decolle~\citep{Kaiser2020}.
 However, in order to apply these new spike-based machine learning techniques to larger models and data-sets as well as prototyping algorithms for neuromorphic hardware~\citep{Davies2018,Furber2014,Merolla2014}, new tools are required which can efficiently simulate SNNs on existing hardware. 
 The development of efficient SNN simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016} but, these simulators are not well-suited to the types of model and the workflows required for spike-based machine learning research.
 As such, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly, eshraghian2021training,Hazan2018} on top of more familiar tools such as PyTorch.
@@ -189,7 +188,7 @@ However, while libraries like PyTorch are highly-optimised for rate-based models
 While our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021} was originally developed for Computational Neuroscience research, its longstanding focus on flexibility and its targeting of GPU accelerators has made it easily adaptable to the needs of spike-based ML.
 Specifically, we have added support for parallel batch simulation of models which allows multiple copies of the model to be run simultaneously to maximise GPU occupancy.
 We have also added support for user-defined ``custom update'' operations which can be used to implement a wide range of functionality including gradient-based optimizers, efficient matrix transpose operations and the reduction of variables across batches.
-In this paper we demonstrate how these new extensions can be used to efficiently implement and train SNN classifiers on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
+In this paper we demonstrate how these new extensions can be used to efficiently implement and train SNN classifiers using eProp~\citep{Bellec2020} on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
 
 \begin{figure}[t]
   \centering
@@ -232,7 +231,12 @@ Finally, although LSNN inference on Loihi has a much lower Energy-Delay Product,
 
 \section{Conclusions}
 By adding additional functionality aimed at accelerating spike-based machine learning workflows to our GeNN simulator, we have demonstrated that training using `forward-mode' learning rules like eProp can not only result in competitive accuracy in classification tasks but also allow  larger models to be trained on longer input sequences than is possible when using BPTT.
-Finally we demonstrate that, by exploiting temporal sparsity, standard CPU and GPU hardware can perform inference faster and with less energy using LSNNs than it can using standard LSTM models.
+We demonstrate that, by exploiting temporal sparsity, standard CPU and GPU hardware can perform inference faster and with less energy using LSNNs than it can using standard LSTM models.
+However, the eProp learning rule requires time-driven updates which dominate the time taken to \emph{train} these models.
+Therefore, we are working to implement the fully event-driven EventProp~\citep{Wunderlich2021} learning rule in GeNN which will allow training times to also benefit from temporal sparsity.
+Finally, the models presented in this paper are all densely connected so are not taking advantage of connection sparsity.
+We are working in parallel to address this by combining these learning rules with the Deep-R~\citep{Bellec2018a} rewiring rule, enabling SNN classifiers to take advantage of GeNN's support for efficient sparse connectivity~\citep{Knight2018}.
+
 
 %%
 %% The acknowledgments section is defined using the "acks" environment
@@ -243,7 +247,7 @@ Finally we demonstrate that, by exploiting temporal sparsity, standard CPU and G
 This work was funded by the EPSRC (grant numbers EP/P006094/1 and EP/S030964/1) and the EU's Horizon 2020 program (grant agreement 945539).
 Compute time was provided through Gauss Centre for Supercomputing application number 21018 and EPSRC (grant number EP/T022205/1).
 \end{acks}
-\pagebreak
+
 %%
 %% The next two lines define the bibliography style to be used, and
 %% the bibliography file.
