@@ -40,8 +40,7 @@
 \usepackage[binary-units]{siunitx}
 
 % Visible TODO notes
-%\newcommand{\todo}[1]{\textbf{\textsc{\textcolor{red}{(TODO: #1)}}}}
-\newcommand{\todo}[1]{}
+\newcommand{\todo}[1]{\textbf{\textsc{\textcolor{red}{(TODO: #1)}}}}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -209,15 +208,15 @@ In this paper we demonstrate how these new extensions can be used to efficiently
 \begin{figure}[t]
   \centering
   \includegraphics{figures/lstm_vs_genn.pdf}
-  \caption{Comparison of inference time and energy delay products of
-    LSNNs and LSTMs. Comparison for optimal batch size (left) and
-    across batch sizes (right).}
+  \caption{Comparison of inference time and energy delay products of LSNNs and LSTMs. 
+  (A) Batch size 1 including Loihi data from \citet{Plank2021}. 
+  (B) Across batch sizes.}
   \label{fig:lstm_vs_genn}
 \end{figure}
 
 \section{Results}
 We trained LSNNs of various sizes with feedforward and recurrent connectivity on the Spiking Heidelberg Digits~(SHD)~\citep{Cramer2020} and spiking sequential MNIST~\citep{Plank2021} datasets using eProp with the default parameters \citet{Bellec2020}.
-When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no consicerable differences \todo{suitable significance test?} for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
+When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no consicerable differences for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
 However, because the reduced memory requirement of eProp allows training larger models, we were  able to discover that the performance can be significantly improved by increasing the number of neurons to \num{512}.
 
 While being able to train networks with high classification accuracy is important, training also needs to be fast.

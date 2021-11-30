@@ -101,6 +101,8 @@ batch_n_edp_axis.set_yscale("log")
 batch_n_latency_axis.set_xscale("log")
 batch_n_edp_axis.set_xscale("log")
 batch_n_edp_axis.set_ylim((1.0, 1E6))
+batch_1_latency_axis.set_title("A", loc="left")
+batch_n_latency_axis.set_title("B", loc="left")
 
 # Hide unnecessary labels
 plt.setp(batch_n_edp_axis.get_yticklabels(), visible=False)
