@@ -22,8 +22,8 @@ assert len(genn_cpu_data) == 1
 assert len(tf_cpu_data) == 1
 
 # Split Titan V data up into LSTM and GeNN and batch 1 and batch N
-lstm_batch_n_data = titan_v_data[(titan_v_data["Model"] == "TF LSTM") & (titan_v_data["Batch size"] > 1)]
-genn_batch_n_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)") & (titan_v_data["Batch size"] > 1)]
+lstm_batch_n_data = titan_v_data[(titan_v_data["Model"] == "TF LSTM") & (titan_v_data["Batch size"] >= 1)]
+genn_batch_n_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)") & (titan_v_data["Batch size"] >= 1)]
 
 lstm_batch_1_data = titan_v_data[(titan_v_data["Model"] == "TF LSTM") & (titan_v_data["Batch size"] == 1)]
 genn_batch_1_data = titan_v_data[(titan_v_data["Model"] == "GeNN LSNN (256 ALIF)") & (titan_v_data["Batch size"] == 1)]
@@ -76,11 +76,12 @@ batch_n_edp_axis.plot(genn_batch_n_data["Batch size"],
 # Plot bars for various batch size 1 things
 bar_x = list(range(5))
 
-bar_data_frames = [(tf_cpu_data, "TensorFlow CPU\n(LSTM RC)*"),
+bar_data_frames = [(tf_cpu_data, "TensorFlow CPU\n(LSTM RC)"),
                    (lstm_batch_1_data, "TensorFlow GPU\n(LSTM RC)"), 
                    (genn_batch_1_data, "GeNN GPU\n(LSNN RC)"),
                    (genn_cpu_data, "GeNN CPU\n(LSNN RC)"),
-                   (loihi_data, "Loihi\n(LSNN RC)*")]
+                   (loihi_data, "Loihi\n(LSNN RC)")]
+
 latency_bar_height = [f["Latency per batch [ms]"].iloc[0] for f,_ in bar_data_frames]
 edp_bar_height = [f["Energy Delay Product (uJs)"].iloc[0] for f,_ in bar_data_frames]
 bar_colours = [pal[i] for i,_ in enumerate(bar_data_frames)]
@@ -95,7 +96,10 @@ batch_1_edp_axis.set_xticklabels([n for _, n in bar_data_frames], rotation=90, m
 batch_n_edp_axis.set_xlabel("Batch size")
 batch_1_latency_axis.set_ylabel("Batch time [ms]")
 batch_1_edp_axis.set_ylabel("EDP [uJs]")
+batch_1_edp_axis.set_yscale("log")
 batch_n_edp_axis.set_yscale("log")
+batch_n_latency_axis.set_xscale("log")
+batch_n_edp_axis.set_xscale("log")
 batch_n_edp_axis.set_ylim((1.0, 1E6))
 
 # Hide unnecessary labels
