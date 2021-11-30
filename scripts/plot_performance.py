@@ -115,7 +115,7 @@ def plot(configs):
 
 shd_configs = [Config("256 neurons", 
                      [("GeNN (eProp LSNN FF)", "shd_256_feedforward"), ("GeNN (eProp LSNN RC)", "shd_256")],
-                     [Performance("PyTorch (BPTT LIF FF)*", 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)*", 80.0, 2.0)]),
+                     [Performance("PyTorch (BPTT LIF FF)", 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)", 80.0, 2.0)]),
               Config("512 neurons", 
                      [("GeNN (eProp LSNN FF)", "shd_512_feedforward"), ("GeNN (eProp LSNN RC)", "shd_512")],
                      []),
@@ -125,7 +125,7 @@ shd_configs = [Config("256 neurons",
 
 smnist_configs = [Config("256 neurons", 
                          [("GeNN (eProp LSNN RC)", "smnist_256")],
-                         [Performance("TensorFlow (BPTT LSNN RC)*", 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)*", 63.3, 0.0)]),
+                         [Performance("TensorFlow (BPTT LSNN RC)", 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)", 63.3, 0.0)]),
                   Config("512 neurons", 
                          [("GeNN (eProp LSNN RC)", "smnist_512")],
                          []),
