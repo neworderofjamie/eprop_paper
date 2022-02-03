@@ -251,25 +251,25 @@ class LogLatencyEncoder(object):
         for i, s in enumerate(slice_indices):
             # Store label
             labels[i] = label_data[s]
-        
+
             # Get boolean mask of spiking neurons
             spike_vector = image_data[s] > self.thresh
-            
+
             # Take cumulative sum to get end spikes
             end_spikes = np.cumsum(spike_vector)
-            
+
             # Extract values of spiking pixels
             spiking_pixels = image_data[s,spike_vector]
-            
+
             # Update max spikes per stimuli
             max_spikes_per_stimuli = max(max_spikes_per_stimuli, len(spiking_pixels))
-            
+
             # Calculate spike times
             spike_times = self.tau_eff * np.log(spiking_pixels / (spiking_pixels - self.thresh))
-            
+
             # Update max stimuli time
             max_stimuli_time = max(max_stimuli_time, np.amax(spike_times))
-            
+
             # Add preprocessed_events tuple to 
             preprocessed_events.append(PreprocessedEvents(end_spikes, spike_times))
 
