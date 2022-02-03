@@ -1,5 +1,5 @@
 #!/bin/bash
-for E in {0..49}
+for E in $(seq 0 $1)
 do
-    python tonic_classifier_evaluate.py --trained-epoch $E "$@"
+    python tonic_classifier_evaluate.py --trained-epoch $E "${@:2}"
 done
