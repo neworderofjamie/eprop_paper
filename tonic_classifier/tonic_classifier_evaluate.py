@@ -113,6 +113,10 @@ output_classification_model = genn_model.create_custom_neuron_class(
 
 # Create dataset
 sensor_size = None
+encoder = None
+spiking = True
+num_outputs = None
+num_input_neurons = None
 if args.dataset == "shd":
     dataset = tonic.datasets.SHD(save_to='./data', train=args.hold_back_validate is not None)
     sensor_size = dataset.sensor_size
@@ -126,6 +130,10 @@ elif args.dataset == "dvs_gesture":
     dataset = tonic.datasets.DVSGesture(save_to='./data', train=args.hold_back_validate is not None,
                                         transform=transform)
     sensor_size = (32, 32, 2)
+elif args.dataset == "mnist":
+    num_outputs = 10
+    dataset = dataloader.get_mnist(False)
+    encoder = dataloader.LogLatencyEncoder(50.0, 51)
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
 
@@ -134,17 +142,19 @@ dataset_slice = slice(None) if args.hold_back_validate is None else slice(-args.
 
 # Create loader
 start_processing_time = perf_counter()
-data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
-                                           sensor_size=sensor_size, dataset_slice=dataset_slice)
+if spiking:
+    num_outputs = len(dataset.classes)
+    num_input_neurons = np.product(sensor_size) 
+    data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
+                                               sensor_size=sensor_size, dataset_slice=dataset_slice)
+else:
+    assert encoder is not None
+    num_input_neurons = np.product(dataset[0].shape[1:])
+    data_loader = dataloader.ImageDataLoader(dataset, shuffle=True, batch_size=batch_size,
+                                             encoder=encoder, dataset_slice=dataset_slice)
+
 end_process_time = perf_counter()
 print("Data processing time:%f ms" % ((end_process_time - start_processing_time) * 1000.0))
-
-# Calculate number of input neurons from sensor size
-# **NOTE** we add one as we use an additional neuron to 
-num_input_neurons = np.product(dataset.sensor_size) 
-
-# Calculate number of valid outputs from classes
-num_outputs = len(dataset.classes)
 
 # Round up to power-of-two
 # **NOTE** not really necessary for evaluation - could slice up weights

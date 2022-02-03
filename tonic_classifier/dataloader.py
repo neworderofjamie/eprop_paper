@@ -81,6 +81,9 @@ def batch_events(events, batch_size):
 
 
 def get_mnist(train):
+    images_file = "train-images-idx3-ubyte" if train else "t10k-images-idx3-ubyte"
+    labels_file = "train-labels-idx1-ubyte" if train else "t10k-labels-idx1-ubyte"
+
     # Open images file
     with open(path.join("mnist", images_file), "rb") as f:
         image_data = f.read()
@@ -250,19 +253,19 @@ class LogLatencyEncoder(object):
             labels[i] = label_data[s]
         
             # Get boolean mask of spiking neurons
-            spike_vector = image_data[s] > thresh
+            spike_vector = image_data[s] > self.thresh
             
             # Take cumulative sum to get end spikes
             end_spikes = np.cumsum(spike_vector)
             
             # Extract values of spiking pixels
-            spiking_pixels = image_data[spike_vector]
+            spiking_pixels = image_data[s,spike_vector]
             
             # Update max spikes per stimuli
             max_spikes_per_stimuli = max(max_spikes_per_stimuli, len(spiking_pixels))
             
             # Calculate spike times
-            spike_times = tau_eff * np.log(spiking_pixels / (spiking_pixels - thresh))
+            spike_times = self.tau_eff * np.log(spiking_pixels / (spiking_pixels - self.thresh))
             
             # Update max stimuli time
             max_stimuli_time = max(max_stimuli_time, np.amax(spike_times))
