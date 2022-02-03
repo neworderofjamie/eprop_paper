@@ -89,6 +89,8 @@ if first_rank and not os.path.exists(output_directory):
 
 # Create dataset
 sensor_size = None
+encoder = None
+spiking = True
 if args.dataset == "shd":
     dataset = tonic.datasets.SHD(save_to='./data', train=True)
     sensor_size = dataset.sensor_size
@@ -102,13 +104,23 @@ elif args.dataset == "dvs_gesture":
     dataset = tonic.datasets.DVSGesture(save_to='./data', train=True, transform=transform, 
                                         download=not args.no_download_dataset)
     sensor_size = (32, 32, 2)
+elif args.dataset == "mnist":
+    dataset = dataloader.get_mnist(True)
+    encoder = LogLatencyEncoder(50.0, 51)
+    spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
 
 # Create loader
 start_processing_time = perf_counter()
-data_loader = dataloader.DataLoader(dataset, shuffle=True, batch_size=batch_size,
-                                    sensor_size=sensor_size, dataset_slice=dataset_slice)
+if spiking:
+    data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=batch_size,
+                                               sensor_size=sensor_size, dataset_slice=dataset_slice)
+else:
+    assert encoder is not None
+    data_loader = dataloader.ImageDataLoader(dataset, shuffle=True, batch_size=batch_size,
+                                             encoder=encoder, dataset_slice=dataset_slice)
+
 end_process_time = perf_counter()
 print("Data processing time:%f ms" % ((end_process_time - start_processing_time) * 1000.0))
 

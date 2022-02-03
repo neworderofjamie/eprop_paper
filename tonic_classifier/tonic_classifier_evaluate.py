@@ -134,8 +134,8 @@ dataset_slice = slice(None) if args.hold_back_validate is None else slice(-args.
 
 # Create loader
 start_processing_time = perf_counter()
-data_loader = dataloader.DataLoader(dataset, shuffle=True, batch_size=args.batch_size,
-                                    sensor_size=sensor_size, dataset_slice=dataset_slice)
+data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
+                                           sensor_size=sensor_size, dataset_slice=dataset_slice)
 end_process_time = perf_counter()
 print("Data processing time:%f ms" % ((end_process_time - start_processing_time) * 1000.0))
 

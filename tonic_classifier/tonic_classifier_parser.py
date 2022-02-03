@@ -14,7 +14,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--learning-rate-decay", type=float, default=1.0)
     parser.add_argument("--learning-rate-decay-epochs", type=int, default=0)
     parser.add_argument("--regularizer-strength", type=float, default=0.001)
-    parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture"], required=True)
+    parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
     parser.add_argument("--suffix", default="")
     parser.add_argument("--seed", type=int, default=1234)
     args = parser.parse_args()
