@@ -134,6 +134,7 @@ elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(False)
     encoder = dataloader.LogLatencyEncoder(50.0, 51)
+    spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
 
@@ -150,7 +151,7 @@ if spiking:
 else:
     assert encoder is not None
     num_input_neurons = np.product(dataset[0].shape[1:])
-    data_loader = dataloader.ImageDataLoader(dataset, shuffle=True, batch_size=batch_size,
+    data_loader = dataloader.ImageDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
                                              encoder=encoder, dataset_slice=dataset_slice)
 
 end_process_time = perf_counter()
