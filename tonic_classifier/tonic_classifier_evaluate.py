@@ -133,7 +133,7 @@ elif args.dataset == "dvs_gesture":
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(False)
-    encoder = dataloader.LogLatencyEncoder(50.0, 51)
+    encoder = dataloader.LogLatencyEncoder(50.0, 51, 100)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)

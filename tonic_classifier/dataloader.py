@@ -230,7 +230,7 @@ class SpikingDataLoader:
         end_spikes = np.cumsum(np.bincount(spike_event_ids, 
                                            minlength=num_input_neurons))
         assert len(end_spikes) == num_input_neurons
-        
+
         # Sort events first by neuron id and then by time and use to order spike times
         spike_times = events["t"][np.lexsort((events["t"], spike_event_ids))]
 
@@ -238,9 +238,10 @@ class SpikingDataLoader:
         return PreprocessedEvents(end_spikes, spike_times / 1000.0)
 
 class LogLatencyEncoder(object):
-    def __init__(self, tau_eff, thresh):
+    def __init__(self, tau_eff, thresh, max_stimuli_time=None):
         self.tau_eff = tau_eff
         self.thresh = thresh
+        self.max_stimuli_time = max_stimuli_time
 
     def __call__(self, image_data, label_data, slice_indices):
         # Loop through slice of dataset
@@ -272,6 +273,10 @@ class LogLatencyEncoder(object):
 
             # Add preprocessed_events tuple to 
             preprocessed_events.append(PreprocessedEvents(end_spikes, spike_times))
+
+        # If max stimuli time is specified, override calculated value
+        if self.max_stimuli_time is not None:
+            max_stimuli_time = self.max_stimuli_time
 
         return (max_stimuli_time, max_spikes_per_stimuli, 
                 labels, preprocessed_events)

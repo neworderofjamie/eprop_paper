@@ -109,7 +109,7 @@ elif args.dataset == "dvs_gesture":
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(True)
-    encoder = dataloader.LogLatencyEncoder(50.0, 51)
+    encoder = dataloader.LogLatencyEncoder(50.0, 51, 100.0)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
@@ -192,7 +192,7 @@ if not args.feedforward:
             recurrent_lif_recurrent_lif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
         else:
             recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
-    
+
 # Recurrent->output synapse parameters
 recurrent_output_params = {"TauE": 20.0}
 recurrent_output_pre_vars = {"ZFilter": 0.0}
