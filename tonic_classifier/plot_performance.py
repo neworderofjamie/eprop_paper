@@ -51,7 +51,11 @@ def plot(output_directory, axis):
         test_performance.append(100.0 * num_correct / num_trials)
         test_epoch.append(epoch)
 
-    max_epoch = max(max(test_epoch), np.amax(epochs))
+    if len(test_performance) > 0:
+        max_epoch = max(max(test_epoch), np.amax(epochs))
+    else:
+        max_epoch = np.amax(epochs)
+
     axis.set_xlim((0, max_epoch))
     axis.set_ylim((0, 100))
 
