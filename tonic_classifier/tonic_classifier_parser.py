@@ -17,6 +17,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
     parser.add_argument("--suffix", default="")
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--reset-neurons", action="store_true")
     args = parser.parse_args()
 
     # Determine output directory name and create if it doesn't exist

@@ -132,8 +132,8 @@ elif args.dataset == "dvs_gesture":
     sensor_size = (32, 32, 2)
 elif args.dataset == "mnist":
     num_outputs = 10
-    dataset = dataloader.get_mnist(False)
-    encoder = dataloader.LogLatencyEncoder(50.0, 51, 100)
+    dataset = dataloader.get_mnist(args.hold_back_validate is not None)
+    encoder = dataloader.LogLatencyEncoder(10.0, 51, 20)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
@@ -291,6 +291,11 @@ input_spike_times_view = input.extra_global_params["spikeTimes"].view
 
 output_y_sum_view = output.vars["YSum"].view
 
+if args.reset_neurons:
+    assert args.num_recurrent_alif == 0
+    recurrent_lif_v_view = recurrent_lif.vars["V"].view
+    output_y_view = output.vars["Y"].view
+
 # Open file
 performance_file = open(os.path.join(output_directory, "performance_evaluate_%u.csv" % args.trained_epoch), "w")
 performance_csv = csv.writer(performance_file, delimiter=",")
@@ -380,6 +385,11 @@ for batch_idx, (events, labels) in enumerate(data_iter):
     performance_csv.writerow((batch_idx, len(labels), num_correct))
     performance_file.flush()
 
+    if args.reset_neurons:
+        recurrent_lif_v_view[:] = 0.0
+        output_y_view[:] = 0.0
+        recurrent_lif.push_var_to_device("V")
+        output.push_var_to_device("Y")
     if args.record:
         # Download recording data
         model.pull_recording_buffers_from_device()

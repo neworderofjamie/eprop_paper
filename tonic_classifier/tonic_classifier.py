@@ -109,7 +109,7 @@ elif args.dataset == "dvs_gesture":
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(True)
-    encoder = dataloader.LogLatencyEncoder(50.0, 51, 100.0)
+    encoder = dataloader.LogLatencyEncoder(10.0, 51, 20.0)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
@@ -437,6 +437,11 @@ output_pi_view = output.vars["Pi"].view
 output_e_view = output.vars["E"].view
 output_b_view = output.vars["B"].view
 
+if args.reset_neurons:
+    assert args.num_recurrent_alif == 0
+    recurrent_lif_v_view = recurrent_lif.vars["V"].view
+    output_y_view = output.vars["Y"].view
+
 if args.num_recurrent_alif > 0:
     input_recurrent_alif_g_view = input_recurrent_alif.vars["g"].view
     recurrent_alif_output_g_view = recurrent_alif_output.vars["g"].view
@@ -519,7 +524,7 @@ for epoch in range(epoch_start, args.num_epochs):
         # Calculate number of outputs which match label
         num_correct = np.sum(np.argmax(classification_output[:len(labels),:], axis=1) == labels)
         num_total = len(labels)
-        
+
         # If we're using NCCL, sum up correct across batch
         if args.use_nccl:
             num_correct = comm.allreduce(sendobj=num_correct, op=MPI.SUM)
@@ -538,6 +543,11 @@ for epoch in range(epoch_start, args.num_epochs):
         model.custom_update("GradientBatchReduce")
         model.custom_update("GradientLearn")
 
+        if args.reset_neurons:
+            recurrent_lif_v_view[:] = 0.0
+            output_y_view[:] = 0.0
+            recurrent_lif.push_var_to_device("V")
+            output.push_var_to_device("Y")
         if args.record:
             # Download recording data
             model.pull_recording_buffers_from_device()
