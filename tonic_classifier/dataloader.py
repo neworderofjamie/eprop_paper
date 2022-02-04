@@ -237,6 +237,46 @@ class SpikingDataLoader:
         # Return end spike indices and spike times (converted to floating point ms)
         return PreprocessedEvents(end_spikes, spike_times / 1000.0)
 
+class LinearLatencyEncoder(object):
+    def __init__(self, thresh, max_stimuli_time):
+        self.thresh = thresh
+        self.max_stimuli_time = max_stimuli_time
+
+    def __call__(self, image_data, label_data, slice_indices):
+        # Loop through slice of dataset
+        labels = np.empty(image_data.shape[0], dtype=int)
+        preprocessed_events = []
+        max_spikes_per_stimuli = 0
+        max_stimuli_time = 0.0
+        scale = self.max_stimuli_time / 255.0
+        for i, s in enumerate(slice_indices):
+            # Store label
+            labels[i] = label_data[s]
+
+            # Get boolean mask of spiking neurons
+            spike_vector = image_data[s] > self.thresh
+
+            # Take cumulative sum to get end spikes
+            end_spikes = np.cumsum(spike_vector)
+
+            # Extract values of spiking pixels
+            spiking_pixels = image_data[s,spike_vector]
+
+            # Update max spikes per stimuli
+            max_spikes_per_stimuli = max(max_spikes_per_stimuli, len(spiking_pixels))
+
+            # Calculate spike times
+            spike_times = (255 - spiking_pixels) * scale
+
+            # Update max stimuli time
+            max_stimuli_time = max(max_stimuli_time, np.amax(spike_times))
+
+            # Add preprocessed_events tuple to
+            preprocessed_events.append(PreprocessedEvents(end_spikes, spike_times))
+
+        return (max_stimuli_time, max_spikes_per_stimuli,
+                labels, preprocessed_events)
+
 class LogLatencyEncoder(object):
     def __init__(self, tau_eff, thresh, max_stimuli_time=None):
         self.tau_eff = tau_eff
