@@ -33,6 +33,8 @@ parser.add_argument("--resume-epoch", type=int, default=None)
 parser.add_argument("--cuda-visible-devices", action="store_true")
 parser.add_argument("--use-nccl", action="store_true")
 parser.add_argument("--hold-back-validate", type=int, default=None)
+parser.add_argument("--regularizer-tau", type=float, default=500.0)
+parser.add_argument("--regularizer-target-rate", type=float, default=10.0)
 
 name_suffix, output_directory, args = parse_arguments(parser, description="Train eProp classifier")
 
@@ -109,7 +111,8 @@ elif args.dataset == "dvs_gesture":
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(True)
-    encoder = dataloader.LogLatencyEncoder(10.0, 51, 20.0)
+    encoder = dataloader.LogLatencyEncoder(10.0, 2, 20.0)
+    #encoder = dataloader.LinearLatencyEncoder(2.0, 20.0)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
@@ -159,9 +162,10 @@ else:
 # Synapse initialisation
 # ----------------------------------------------------------------------------
 # eProp parameters common across all populations
-eprop_lif_params = {"TauE": 20.0, "CReg": args.regularizer_strength, "FTarget": 10.0, "TauFAvg": 500.0}
-eprop_alif_params = {"TauE": 20.0, "TauA": 2000.0, "CReg": args.regularizer_strength,
-                     "FTarget": 10.0, "TauFAvg": 500.0, "Beta": 0.0174}
+eprop_lif_params = {"TauE": 20.0, "CReg": args.regularizer_strength, "FTarget": args.regularizer_target_rate, 
+                    "TauFAvg": args.regularizer_tau}
+eprop_alif_params = {"TauE": 20.0, "TauA": 2000.0, "CReg": args.regularizer_strength, "FTarget": args.regularizer_target_rate,
+                     "TauFAvg": args.regularizer_tau, "Beta": 0.0174}
 eprop_pre_vars = {"ZFilter": 0.0}
 eprop_post_vars = {"Psi": 0.0, "FAvg": 0.0}
 
@@ -442,9 +446,6 @@ if args.reset_neurons:
     assert args.num_recurrent_alif == 0
     recurrent_lif_v_view = recurrent_lif.vars["V"].view
     output_y_view = output.vars["Y"].view
-    input_recurrent_lif_zfilter_view = input_recurrent_lif.pre_vars["ZFilter"].view
-    input_recurrent_lif_efiltered_view = input_recurrent_lif.vars["eFiltered"].view
-    recurrent_lif_output_zfilter_view = recurrent_lif_output.pre_vars["ZFilter"].view
 
 if args.num_recurrent_alif > 0:
     input_recurrent_alif_g_view = input_recurrent_alif.vars["g"].view
@@ -550,15 +551,9 @@ for epoch in range(epoch_start, args.num_epochs):
         if args.reset_neurons:
             recurrent_lif_v_view[:] = 0.0
             output_y_view[:] = 0.0
-            input_recurrent_lif_zfilter_view[:] = 0.0
-            input_recurrent_lif_efiltered_view[:] = 0.0
-            recurrent_lif_output_zfilter_view[:] = 0.0
-            
+
             recurrent_lif.push_var_to_device("V")
             output.push_var_to_device("Y")
-            input_recurrent_lif.push_var_to_device("ZFilter")
-            input_recurrent_lif.push_var_to_device("eFiltered")
-            recurrent_lif_output.push_var_to_device("ZFilter")
 
         if args.record:
             # Download recording data
