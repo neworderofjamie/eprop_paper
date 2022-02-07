@@ -129,6 +129,7 @@ else:
 
 end_process_time = perf_counter()
 print("Data processing time:%f ms" % ((end_process_time - start_processing_time) * 1000.0))
+print("Max stimuli time:%f ms" % data_loader.max_stimuli_time)
 
 # Round up to power-of-two
 num_output_neurons = int(2**(np.ceil(np.log2(num_outputs))))
@@ -441,6 +442,9 @@ if args.reset_neurons:
     assert args.num_recurrent_alif == 0
     recurrent_lif_v_view = recurrent_lif.vars["V"].view
     output_y_view = output.vars["Y"].view
+    input_recurrent_lif_zfilter_view = input_recurrent_lif.pre_vars["ZFilter"].view
+    input_recurrent_lif_efiltered_view = input_recurrent_lif.vars["eFiltered"].view
+    recurrent_lif_output_zfilter_view = recurrent_lif_output.pre_vars["ZFilter"].view
 
 if args.num_recurrent_alif > 0:
     input_recurrent_alif_g_view = input_recurrent_alif.vars["g"].view
@@ -546,8 +550,16 @@ for epoch in range(epoch_start, args.num_epochs):
         if args.reset_neurons:
             recurrent_lif_v_view[:] = 0.0
             output_y_view[:] = 0.0
+            input_recurrent_lif_zfilter_view[:] = 0.0
+            input_recurrent_lif_efiltered_view[:] = 0.0
+            recurrent_lif_output_zfilter_view[:] = 0.0
+            
             recurrent_lif.push_var_to_device("V")
             output.push_var_to_device("Y")
+            input_recurrent_lif.push_var_to_device("ZFilter")
+            input_recurrent_lif.push_var_to_device("eFiltered")
+            recurrent_lif_output.push_var_to_device("ZFilter")
+
         if args.record:
             # Download recording data
             model.pull_recording_buffers_from_device()
