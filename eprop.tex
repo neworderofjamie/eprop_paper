@@ -35,7 +35,7 @@
 %%
 %%
 %% The first command in your LaTeX source must be the \documentclass command.
-\documentclass[sigconf,authordraft]{acmart}
+\documentclass[sigconf]{acmart}
 
 \usepackage[binary-units]{siunitx}
 
@@ -208,19 +208,19 @@ In this paper we demonstrate how these new extensions can be used to efficiently
 \begin{figure}[t]
   \centering
   \includegraphics{figures/lstm_vs_genn.pdf}
-  \caption{Comparison of inference time and energy delay products of LSNNs and LSTMs. 
-  (A) Batch size 1 including Loihi data from \citet{Plank2021}. 
+  \caption{Inference time and energy delay product comparison of LSNNs and LSTMs trained on Sequential MNIST~\citep{Plank2021}. 
+  (A) Batch size 1 with Loihi data from \citet{Plank2021}. 
   (B) Across batch sizes.}
   \label{fig:lstm_vs_genn}
 \end{figure}
 
 \section{Results}
-We trained LSNNs of various sizes with feedforward and recurrent connectivity on the Spiking Heidelberg Digits~(SHD)~\citep{Cramer2020} and spiking sequential MNIST~\citep{Plank2021} datasets using eProp with the default parameters \citet{Bellec2020}.
-When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no consicerable differences for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
+We trained LSNNs of various sizes with feedforward and recurrent connectivity on the Spiking Heidelberg Digits~(SHD)~\citep{Cramer2020} and spiking sequential MNIST~\citep{Plank2021} datasets using eProp with the default parameters~\citep{Bellec2020}.
+When comparing the performance of models trained with eProp on the SHD dataset with results obtained using BPTT~\citep{Zenke2021a} we found no considerable differences for the \num{256} neuron models (figure~\ref{fig:shd_performance}). 
 However, because the reduced memory requirement of eProp allows training larger models, we were  able to discover that the performance can be significantly improved by increasing the number of neurons to \num{512}.
 
 While being able to train networks with high classification accuracy is important, training also needs to be fast.
-Figure~\ref{fig:training_time} shows how the time taken to train recurrent LSNNs using eProp with GeNN compares against training recurrent LIF networks using BPTT with PyTorch.
+Figure~\ref{fig:training_time} shows how the time taken to train recurrent LSNNs using eProp with GeNN compares against training recurrent LIF networks using BPTT with PyTorch code from \citet{Zenke2021a}.
 For short input sequences, training using GeNN is slower (probably due to PyTorch's use of tensor cores) but, as sequence length increases, GeNN runtime increases slower and the memory requirements of BPTT mean that PyTorch is unable to train models larger than \num{256} neurons on \num{1370} timestep input sequences.
 
 Figure~\ref{fig:lstm_vs_genn} compares the inference time and energy delay products~(EDPs) of LSNNs simulated with GeNN against LSTM models running on the same hardware~\citep{Plank2021} as well as LSNNs running on the Loihi neuromorphic chip~\citep{Davies2018}.
