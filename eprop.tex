@@ -36,7 +36,7 @@
 %%
 %% The first command in your LaTeX source must be the \documentclass command.
 \documentclass[sigconf]{acmart}
-
+\usepackage{balance} % For balanced columns on the last page
 \usepackage[binary-units]{siunitx}
 
 % Visible TODO notes
@@ -250,6 +250,7 @@ Compute time was provided through Gauss Centre for Supercomputing application nu
 %%
 %% The next two lines define the bibliography style to be used, and
 %% the bibliography file.
+\balance
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{eprop}
 
