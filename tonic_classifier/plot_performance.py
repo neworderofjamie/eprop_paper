@@ -63,7 +63,7 @@ def plot(output_directory, axis):
         # Plot
         test_actor = axis.plot(test_epoch, test_performance, label="Testing")[0]
 
-        max_test_performance = test_performance[max_epoch]
+        max_test_performance = test_performance[min(int(max_epoch), len(test_performance) - 1)]
         axis.axhline(max_test_performance, linestyle="--", color=test_actor.get_color())
         axis.annotate("%0.2f%%" % max_test_performance, (max_epoch, max_test_performance), 
                       ha="left", va="center", color=test_actor.get_color())
