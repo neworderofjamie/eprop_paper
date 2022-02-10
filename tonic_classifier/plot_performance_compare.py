@@ -11,12 +11,23 @@ num_rows = int(math.ceil(float(num_results) / num_cols))
 
 fig, axes = plt.subplots(num_rows, num_cols, sharex="col", sharey="row")
 
+best_trial = None
 for i, (a, d) in enumerate(zip(axes.flatten(), directories)):
     a.set_title(d)
-    plot(d, a)
+    max_train_performance, max_test_performance = plot(d, a)
+    print(d)
+    print("\tMax training performance: %f%%" % max_train_performance)
+    print("\tMax testing performance: %f%%" % max_test_performance)
+
+    if best_trial is None:
+         best_trial = (d, max_test_performance)
+    elif max_test_performance > best_trial[1]:
+         best_trial = (d, max_test_performance)
+
     if i == 0:
         a.legend()
 
+print("Best performance '%s': %f" % (best_trial[0], best_trial[1]))
 if num_rows > 1:
     for i in range(num_rows):
         axes[i, 0].set_ylabel("Performance [%]")
