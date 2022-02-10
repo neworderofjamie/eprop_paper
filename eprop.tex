@@ -198,7 +198,7 @@ In this paper we demonstrate how these new extensions can be used to efficiently
 \begin{figure}[t]
   \centering
   \includegraphics{figures/training_time.pdf}
-  \caption{Training times comparison of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch on Spiking Heidelberg Digits dataset. A \SI{12}{\giga\byte} Titan V GPU is used for all experiments. Input spike trains are binned to achieve different numbers of timesteps. Missing bars indicate insufficient memory for experiment.}
+  \caption{Training time comparison of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch on Spiking Heidelberg Digits dataset. A \SI{12}{\giga\byte} Titan V GPU and a batch size of \num{512} are used for all experiments. Input spike trains are binned to achieve different numbers of timesteps. Missing bars indicate insufficient memory for experiment.}
   \label{fig:training_time}
 \end{figure}
 
@@ -218,7 +218,7 @@ However, because the reduced memory requirement of eProp allows training larger 
 
 While being able to train networks with high classification accuracy is important, training also needs to be fast.
 Figure~\ref{fig:training_time} shows how the time taken to train recurrent LSNNs using eProp with GeNN compares against training recurrent LIF networks using BPTT with PyTorch code from \citet{Zenke2021a}.
-For short input sequences, training using GeNN is slower (probably due to PyTorch's use of tensor cores) but, as sequence length increases, GeNN runtime increases slower and the memory requirements of BPTT mean that PyTorch is unable to train models larger than \num{256} neurons on \num{1370} timestep input sequences.
+For short input sequences, training using GeNN is slower but, the runtime of GeNN simulations increases slower with sequence length and, because BPTT requires the state of the model to be recorded every time step, the memory requirements are such that PyTorch is unable to train models larger than \num{256} neurons on \num{1370} timestep input sequences with our chosen batch size of \num{512}.
 
 Figure~\ref{fig:lstm_vs_genn} compares the inference time and energy delay products~(EDPs) of LSNNs simulated with GeNN against LSTM models running on the same hardware~\citep{Plank2021} as well as LSNNs running on the Loihi neuromorphic chip~\citep{Davies2018}.
 On the same Titan V GPU, LSNNs are faster than LSTMs and have a lower EDP across all batch sizes.
