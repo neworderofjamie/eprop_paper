@@ -400,10 +400,10 @@ for batch_idx, (events, labels) in enumerate(data_iter):
 
         if args.num_recurrent_alif > 0:
             for i, s in enumerate(recurrent_alif.spike_recording_data):
-                write_spike_file(os.path.join(output_directory, "recurrent_spikes_%u_%u_%u.csv" % (epoch, batch_idx, i)), s)
+                write_spike_file(os.path.join(output_directory, "recurrent_spikes_%u_%u_%u.csv" % (args.trained_epoch, batch_idx, i)), s)
         if args.num_recurrent_lif > 0:
             for i, s in enumerate(recurrent_lif.spike_recording_data):
-                write_spike_file(os.path.join(output_directory, "recurrent_lif_spikes_%u_%u_%u.csv" % (epoch, batch_idx, i)), s)
+                write_spike_file(os.path.join(output_directory, "recurrent_lif_spikes_%u_%u_%u.csv" % (args.trained_epoch, batch_idx, i)), s)
 
     batch_end_time = perf_counter()
     batch_times.append((batch_end_time - batch_start_time) * 1000.0)
