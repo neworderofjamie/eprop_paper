@@ -112,7 +112,6 @@ elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(True)
     encoder = dataloader.LogLatencyEncoder(args.log_latency_tau, args.log_latency_threshold, 100.0)
-    #encoder = dataloader.LinearLatencyEncoder(2.0, 20.0)
     spiking = False
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
