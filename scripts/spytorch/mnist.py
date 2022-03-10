@@ -8,8 +8,13 @@ import torch
 import torch.nn as nn
 import torchvision
 
+if "SLURM_ARRAY_TASK_ID" in os.environ:
+    hidden_size = [128, 256, 512]
+    nb_hidden = hidden_size[int(os.environ["SLURM_ARRAY_TASK_ID"])]
+else:
+    nb_hidden  = 128
+
 nb_inputs  = 28*28
-nb_hidden  = 128
 nb_outputs = 10
 
 time_step = 1e-3
@@ -255,9 +260,9 @@ def compute_classification_accuracy(x_data, y_data):
     return np.mean(accs)
 
 start_train_time = perf_counter()
-loss_hist = train(x_train, y_train, lr=2e-4, nb_epochs=30)
+loss_hist = train(x_train, y_train, lr=2e-4, nb_epochs=100)
 end_train_time = perf_counter()
-print("Train time:%f ms" % (end_train_time - start_train_time) * 1000.0)
+print("Train time:%f ms" % ((end_train_time - start_train_time) * 1000.0))
 
 print("Training accuracy: %.3f"%(compute_classification_accuracy(x_train,y_train)))
 print("Test accuracy: %.3f"%(compute_classification_accuracy(x_test,y_test)))
