@@ -1,12 +1,9 @@
 import os
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-import seaborn as sns
+from time import perf_counter
 
 import mnist
-
 import torch
 import torch.nn as nn
 import torchvision
@@ -221,10 +218,19 @@ def train(x_data, y_data, lr=2e-3, nb_epochs=10):
     for e in range(nb_epochs):
         local_loss = []
         for x_local, y_local in sparse_data_generator(x_data, y_data, batch_size, nb_steps, nb_inputs):
-            output,_ = run_snn(x_local.to_dense())
+            output,recs = run_snn(x_local.to_dense())
+            _,spks=recs
             m,_=torch.max(output,1)
             log_p_y = log_softmax_fn(m)
-            loss_val = loss_fn(log_p_y, y_local)
+            
+            # Here we set up our regularizer loss
+            # The strength paramters here are merely a guess and there should be ample room for improvement by
+            # tuning these paramters.
+            reg_loss = 1e-5*torch.sum(spks) # L1 loss on total number of spikes
+            reg_loss += 1e-5*torch.mean(torch.sum(torch.sum(spks,dim=0),dim=0)**2) # L2 loss on spikes per neuron
+            
+            # Here we combine supervised loss and the regularizer
+            loss_val = loss_fn(log_p_y, y_local) + reg_loss
 
             optimizer.zero_grad()
             loss_val.backward()
@@ -248,7 +254,10 @@ def compute_classification_accuracy(x_data, y_data):
         accs.append(tmp)
     return np.mean(accs)
 
+start_train_time = perf_counter()
 loss_hist = train(x_train, y_train, lr=2e-4, nb_epochs=30)
+end_train_time = perf_counter()
+print("Train time:%f ms" % (end_train_time - start_train_time) * 1000.0)
 
 print("Training accuracy: %.3f"%(compute_classification_accuracy(x_train,y_train)))
 print("Test accuracy: %.3f"%(compute_classification_accuracy(x_test,y_test)))
