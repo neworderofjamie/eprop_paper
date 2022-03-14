@@ -1,10 +1,10 @@
 Learning rule,Num LIF,Batch size,Learning rate,Regularizer strength,Timestep [ms],Architecture,Training Epochs,Encoding,Training performance 1 [%],Testing performance 1 [%],Training time [s]
-EProp,128,512,0.001,0.001,1,Feedforward,100,Log 100ms,99.613333,96.69,1863.329733
-EProp,256,512,0.001,0.001,1,Feedforward,100,Log 100ms,99.871667,96.97,3522.091958
-EProp,512,512,0.001,0.001,1,Feedforward,100,Log 100ms,99.913333,96.58,6743.72092
-EventProp,128,128,0.01,,1,Feedforward,100,Log 100ms,97.50767895,96.96514423,369.9927753
-EventProp,256,128,0.01,,1,Feedforward,100,Log 100ms,98.19878472,97.73637821,427.7956611
-EventProp,512,128,0.01,,1,Feedforward,100,Log 100ms,98.3707265,97.64623397,526.129884
-BPTT,128,512,,,1,Feedforward,100,Log 100ms,99.6,96.2,1546.614
-BPTT,256,512,,,1,Feedforward,100,Log 100ms,99.8,96.5,1916.580737
-BPTT,512,512,,,1,Feedforward,100,Log 100ms,99.8,96.4,2536.315786
+EProp,100,128,0.001,0.001,1,Feedforward,100,Log 100ms,99.62,96.66,1606.804831
+EProp,200,128,0.001,0.001,1,Feedforward,100,Log 100ms,99.73,96.78,3015.160919
+EProp,400,128,0.001,0.001,1,Feedforward,100,Log 100ms,99.738333,96.74,5562.879695
+EventProp,100,128,0.01,,1,Feedforward,100,Log 100ms,97.35243056,96.97516026,373.9646683
+EventProp,200,128,0.01,,1,Feedforward,100,Log 100ms,97.91332799,97.59615385,408.0910688
+EventProp,400,128,0.01,,1,Feedforward,100,Log 100ms,98.22549412,97.49599359,497.0201271
+BPTT,100,128,,,1,Feedforward,100,Log 100ms,99.3,97.7,4666.721418
+BPTT,200,128,,,1,Feedforward,100,Log 100ms,,,4826.582553
+BPTT,400,128,,,1,Feedforward,100,Log 100ms,,,4739.396758

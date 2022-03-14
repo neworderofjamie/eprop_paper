@@ -12,7 +12,7 @@ BAR_WIDTH = 1.0
 BAR_PAD = 0.2
 GROUP_PAD = 1.0
 
-def plot(data, fig, axis, column_name):
+def plot(data, axis, column_name):
     # Extract PyTorch and GeNN data
     pytorch_data = data[data["Learning rule"] == "BPTT"]
     eprop_data = data[data["Learning rule"] == "EProp"]
@@ -53,29 +53,33 @@ def plot(data, fig, axis, column_name):
     # Remove axis junk
     sns.despine(ax=axis)
     axis.xaxis.grid(False)
+    
+    return legend_actors
 
-    # Show figure legend with devices beneath figure
-    fig.legend(legend_actors, ["PyTorch (BPTT LIF FF)", "GeNN (eProp LIF FF)", "GeNN (EventProp LIF FF)"], 
-               ncol=3 if plot_settings.presentation else 2, 
-               frameon=False, loc="lower center")
 # Load data
 data = read_csv("eprop_event_prop.csv", delimiter=",")
 
-# Create training time figure
-time_fig, time_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
-plot(data, time_fig, time_axis, "Training time [s]")
-time_axis.set_ylabel("Training time [s]")
-time_fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.2, 1.0, 1.0])
+fig, axes = plt.subplots(1, 2, figsize=(plot_settings.double_column_width, 3.0))
 
-# Create evaluation performance figure
-perf_fig, perf_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
-plot(data, perf_fig, perf_axis, "Testing performance 1 [%]")
-perf_axis.set_ylabel("Accuracy [%]")
-perf_axis.set_ylim((90, 100))
-perf_fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.2, 1.0, 1.0])
+
+# Create evaluation performance panel
+plot(data, axes[0], "Testing performance 1 [%]")
+axes[0].set_ylabel("Accuracy [%]")
+axes[0].set_ylim((90, 100))
+
+
+# Create training time panel
+legend_actors = plot(data, axes[1], "Training time [s]")
+axes[1].set_ylabel("Training time [s]")
+
+
+# Show figure legend with devices beneath figure
+fig.legend(legend_actors, ["PyTorch (BPTT LIF FF)", "GeNN (eProp LIF FF)", "GeNN (EventProp LIF FF)"], 
+            ncol=3, frameon=False, loc="lower center")
+
+fig.tight_layout(pad=0, rect=[0.0, 0.0 if plot_settings.presentation else 0.1, 1.0, 1.0])
 
 
 if not plot_settings.presentation:
-    time_fig.savefig("../figures/eprop_event_prop_training_time.pdf")
-    perf_fig.savefig("../figures/eprop_event_prop_accuracy.pdf")
+    fig.savefig("../figures/eprop_event_prop.pdf")
 plt.show()
