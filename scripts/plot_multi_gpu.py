@@ -7,6 +7,9 @@ import seaborn as sns
 # Load data
 data = read_csv("multi_gpu.csv", delimiter=",")
 
+# Get reference time
+reference_time = data[(data["Device"] == "V100") & (data["Num GPUs"] == 1)]["Training time [ms]"].values[0]
+
 fig, axis = plt.subplots()
 
 # Loop through unique devices
@@ -16,12 +19,13 @@ for d in devices:
     # Get device data
     device_data = data[data["Device"] == d]
 
-    # Plot reciprocal of training time
-    actor = axis.plot(device_data["Num GPUs"], device_data["Reciprocal training time"],
+    # Plot speedup compared to reference time
+    speedup = reference_time / device_data["Training time [ms]"]
+    actor = axis.plot(device_data["Num GPUs"], speedup,
                       marker="x")[0]
-
+    
     # In dashed line show perfect scaling
-    axis.plot(device_data["Num GPUs"], device_data["Perfect scaling reciprocal training time"],
+    axis.plot(device_data["Num GPUs"], speedup.values[0] * device_data["Num GPUs"],
               linestyle="--", color=actor.get_color())
     device_actors.append(actor)
 
@@ -30,7 +34,7 @@ axis.set_yscale("log", basey=2)
 axis.xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
 axis.yaxis.set_major_formatter(mticker.ScalarFormatter())
 axis.set_xlabel("Num GPUs")
-axis.set_ylabel("Reciprocol training time [minute$^{-1}$]")
+axis.set_ylabel("Speedup compared to single V100")
 
 # Remove axis junk
 sns.despine(ax=axis)
