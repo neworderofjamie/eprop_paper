@@ -16,8 +16,10 @@ ADAM_BETA2 = 0.999
 WEIGHT_0 = 1.0
 
 NUM_INPUT = 20
-NUM_RECURRENT = 600
+NUM_RECURRENT = 256
 NUM_OUTPUT = 3
+
+SPARSITY = 0.1
 
 #----------------------------------------------------------------------------
 # Neuron models
@@ -131,7 +133,7 @@ adam_vars = {"m": 0.0, "v": 0.0}
 # ----------------------------------------------------------------------------
 model = genn_model.GeNNModel("float", "pattern_recognition")
 model.dT = 1.0
-#model.timing_enabled =
+model.timing_enabled = True
 model._model.set_fuse_postsynaptic_models(True)
 model._model.set_fuse_pre_post_weight_update_models(True)
 
@@ -150,11 +152,15 @@ input.spike_recording_enabled = True
 recurrent.spike_recording_enabled = True
 
 # Add synapse populations
+input_recurrent_sparse_init = (None if SPARSITY is None 
+                               else genn_model.init_connectivity("FixedProbability", {"prob": SPARSITY}))
 input_recurrent = model.add_synapse_population(
-    "InputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+    "InputRecurrentLIF", "DENSE_INDIVIDUALG" if SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
     input, recurrent,
     eprop.eprop_lif_model, eprop_lif_params, input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
-    "DeltaCurr", {}, {})
+    "DeltaCurr", {}, {},
+    input_recurrent_sparse_init)
+
 recurrent_output = model.add_synapse_population(
     "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
     recurrent, output,
@@ -167,11 +173,14 @@ output_recurrent = model.add_synapse_population(
     "DeltaCurr", {}, {})
 output_recurrent.ps_target_var = "ISynFeedback"
 
+recurrent_recurrent_sparse_init = (None if SPARSITY is None 
+                                   else genn_model.init_connectivity("FixedProbabilityNoAutapse", {"prob": SPARSITY}))
 recurrent_recurrent = model.add_synapse_population(
-    "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+    "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG" if SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
     recurrent, recurrent,
     eprop.eprop_lif_model, eprop_lif_params, recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
-    "DeltaCurr", {}, {})
+    "DeltaCurr", {}, {},
+    recurrent_recurrent_sparse_init)
 
 # Add custom update for calculating initial tranpose weights
 model.add_custom_update("recurrent_hidden_transpose", "CalculateTranspose", "Transpose",
@@ -252,6 +261,11 @@ for trial in range(1000):
     # Now batch is complete, apply gradients
     model.custom_update("GradientLearn")
 
+print(f"Init: {model.init_time}")
+print(f"Init sparse: {model.init_sparse_time}")
+print(f"Neuron update: {model.neuron_update_time}")
+print(f"Presynaptic update: {model.presynaptic_update_time}")
+print(f"Synapse dynamics: {model.synapse_dynamics_time}")
 
 assert len(input_spikes) == len(recurrent_spikes)
 assert len(input_spikes) == len(output_y)
@@ -260,19 +274,23 @@ assert len(input_spikes) == len(output_y_star)
 # Create plot
 figure, axes = plt.subplots(5, len(output_y), sharex="col", sharey="row")
 
+# Loop through recorded trials
 for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output_y, output_y_star)):
-    # Y0 and Y0*
-    axes[0, i].plot(y[:,0])
-    axes[0, i].plot(y_star[:,0])
-
-    # Y1 and Y1*
-    axes[1, i].plot(y[:,1])
-    axes[1, i].plot(y_star[:,1])
-
-    # Y2 and Y2*
-    axes[2, i].plot(y[:,2])
-    axes[2, i].plot(y_star[:,2])
-
+    # Loop through output axes
+    total_mse = 0.0
+    for a in range(3):
+        # Calculate error and hence MSE
+        error = y[:,a] - y_star[:,a]
+        mse = np.sum(error * error) / len(error)
+        
+        # YA and YA*
+        axes[a, i].plot(y[:,a])
+        axes[a, i].plot(y_star[:,a])
+        
+        axes[a, i].set_title(f"Y{a} (MSE={mse:.2f})")
+        total_mse += mse
+    print(f"{i}: Total MSE: {total_mse}")
+    
     # Input and recurrent spikes
     axes[3, i].scatter(s[0], s[1], s=1)
     axes[4, i].scatter(r[0], r[1], s=1)
