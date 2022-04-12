@@ -17,12 +17,12 @@ ADAM_BETA2 = 0.999
 WEIGHT_0 = 1.0
 
 NUM_INPUT = 20
-NUM_RECURRENT = 128
+NUM_RECURRENT = 256
 NUM_OUTPUT = 3
 
-SPARSITY = 0.1
+SPARSITY = 0.5
 DEEP_R = True
-
+PLOT = True
         
 #----------------------------------------------------------------------------
 # Neuron models
@@ -241,15 +241,15 @@ input_spikes = []
 recurrent_spikes = []
 output_y = []
 output_y_star = []
-deep_r_update_time = 0.0
-deep_r_reset_time = 0.0
+deep_r_time = 0.0
 for trial in range(1000):
     # Reduce learning rate every 100 trials
     if (trial % 100) == 0 and trial != 0:
         print(f"Trial {trial}")
         learning_rate *= 0.7
 
-    record_trial = ((trial % 100) == 0)
+    #record_trial = ((trial % 100) == 0)
+    record_trial = (trial == 999)
 
     # Reset time
     model.timestep = 0
@@ -289,7 +289,7 @@ for trial in range(1000):
         recurrent_recurrent_deep_r.reset()
         
         deep_r_reset_end = perf_counter()
-        deep_r_reset_time += (deep_r_reset_end - deep_r_reset_start)
+        deep_r_time += (deep_r_reset_end - deep_r_reset_start)
     
     # Now batch is complete, apply gradients
     model.custom_update("GradientLearn")
@@ -301,7 +301,7 @@ for trial in range(1000):
         recurrent_recurrent_deep_r.update()
         
         deep_r_update_end = perf_counter()
-        deep_r_update_time += (deep_r_update_end - deep_r_update_start)
+        deep_r_time += (deep_r_update_end - deep_r_update_start)
 
 print(f"Init: {model.init_time}")
 print(f"Init sparse: {model.init_sparse_time}")
@@ -310,38 +310,44 @@ print(f"Presynaptic update: {model.presynaptic_update_time}")
 print(f"Synapse dynamics: {model.synapse_dynamics_time}")
 
 if DEEP_R:
-    print(f"Deep-R reset: {deep_r_reset_time}")
-    print(f"Deep-R update: {deep_r_update_time}")
+    print(f"Deep-R: {deep_r_time}")
 
 assert len(input_spikes) == len(recurrent_spikes)
 assert len(input_spikes) == len(output_y)
 assert len(input_spikes) == len(output_y_star)
 
 # Create plot
-figure, axes = plt.subplots(5, len(output_y), sharex="col", sharey="row")
+if PLOT:
+    figure, axes = plt.subplots(5, len(output_y), sharex="col", sharey="row")
 
 # Loop through recorded trials
 for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output_y, output_y_star)):
     # Loop through output axes
+    col_axes = axes if len(output_y) == 1 else axes[:, i]
     total_mse = 0.0
     for a in range(3):
         # Calculate error and hence MSE
         error = y[:,a] - y_star[:,a]
         mse = np.sum(error * error) / len(error)
-        
-        # YA and YA*
-        axes[a, i].plot(y[:,a])
-        axes[a, i].plot(y_star[:,a])
-        
-        axes[a, i].set_title(f"Y{a} (MSE={mse:.2f})")
         total_mse += mse
+    
+        if PLOT:
+            # YA and YA*
+            col_axes[a].plot(y[:,a])
+            col_axes[a].plot(y_star[:,a])
+            
+            col_axes[a].set_title(f"Y{a} (MSE={mse:.2f})")
+        
     print(f"{i}: Total MSE: {total_mse}")
     
-    # Input and recurrent spikes
-    axes[3, i].scatter(s[0], s[1], s=1)
-    axes[4, i].scatter(r[0], r[1], s=1)
+    if PLOT:
+        # Input and recurrent spikes
+        col_axes[3].scatter(s[0], s[1], s=1)
+        col_axes[4].scatter(r[0], r[1], s=1)
 
-axes[0, 0].set_ylim((-3.0, 3.0))
-axes[1, 0].set_ylim((-3.0, 3.0))
-axes[2, 0].set_ylim((-3.0, 3.0))
-plt.show()
+if PLOT:
+    col_axes = axes if len(output_y) == 1 else axes[:, 0]
+    col_axes[0].set_ylim((-3.0, 3.0))
+    col_axes[1].set_ylim((-3.0, 3.0))
+    col_axes[2].set_ylim((-3.0, 3.0))
+    plt.show()
