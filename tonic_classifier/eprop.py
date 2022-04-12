@@ -42,6 +42,29 @@ adam_optimizer_zero_gradient_model = genn_model.create_custom_custom_update_clas
     $(gradient) = 0.0;
     """)
 
+adam_optimizer_zero_gradient_sign_track_model = genn_model.create_custom_custom_update_class(
+    "adam_optimizer_zero_gradient_sign_track",
+    param_names=["beta1", "beta2", "epsilon"],
+    var_name_types=[("m", "scalar"), ("v", "scalar")],
+    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
+                         ("secondMomentScale", "scalar"), ("signChange", "uint32_t*")],
+    var_refs=[("gradient", "scalar"), ("variable", "scalar")],
+    update_code="""
+    // Update biased first moment estimate
+    $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
+    // Update biased second moment estimate
+    $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
+    // Add gradient to variable, scaled by learning rate
+    const int variableSign = signbit($(variable));
+    $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
+    // Zero gradient
+    $(gradient) = 0.0;
+    // If sign changes, set bit
+    if(signbit($(variable)) != variableSign) {
+        atomicOr(&$(signChange)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
+    }
+    """)
+
 gradient_batch_reduce_model = genn_model.create_custom_custom_update_class(
     "gradient_batch_reduce",
     var_name_types=[("reducedGradient", "scalar", VarAccess_REDUCE_BATCH_SUM)],
