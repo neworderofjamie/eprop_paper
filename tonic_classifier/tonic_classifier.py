@@ -31,6 +31,7 @@ parser.add_argument("--batch-size", type=int, default=512)
 parser.add_argument("--num-epochs", type=int, default=50)
 parser.add_argument("--resume-epoch", type=int, default=None)
 parser.add_argument("--cuda-visible-devices", action="store_true")
+parser.add_argument("--no-filter", action="store_true")
 parser.add_argument("--use-nccl", action="store_true")
 parser.add_argument("--hold-back-validate", type=int, default=None)
 parser.add_argument("--regularizer-tau", type=float, default=500.0)
@@ -144,9 +145,9 @@ output_neuron_models = {16: eprop.output_classification_model_16,
 # Neuron initialisation
 # ----------------------------------------------------------------------------
 # Recurrent population
-recurrent_alif_params = {"TauM": 20.0, "TauAdap": 2000.0, "Vthresh": 0.6, "TauRefrac": 5.0, "Beta": 0.0174}
+recurrent_alif_params = {"TauM": args.tau_m, "TauAdap": 2000.0, "Vthresh": 0.6, "TauRefrac": 5.0, "Beta": 0.0174}
 recurrent_alif_vars = {"V": 0.0, "A": 0.0, "RefracTime": 0.0, "E": 0.0}
-recurrent_lif_params = {"TauM": 20.0, "Vthresh": 0.6, "TauRefrac": 5.0}
+recurrent_lif_params = {"TauM": args.tau_m, "Vthresh": 0.6, "TauRefrac": 5.0}
 recurrent_lif_vars = {"V": 0.0, "RefracTime": 0.0, "E": 0.0}
 
 # Output population
@@ -161,8 +162,10 @@ else:
 # Synapse initialisation
 # ----------------------------------------------------------------------------
 # eProp parameters common across all populations
-eprop_lif_params = {"TauE": 20.0, "CReg": args.regularizer_strength, "FTarget": args.regularizer_target_rate, 
-                    "TauFAvg": args.regularizer_tau}
+eprop_lif_filter_params = {"TauE": 20.0, "TauM": args.tau_m, "CReg": args.regularizer_strength, 
+                           "FTarget": args.regularizer_target_rate, "TauFAvg": args.regularizer_tau}
+eprop_lif_no_filter_params = {"TauM": args.tau_m, "CReg": args.regularizer_strength, "FTarget": args.regularizer_target_rate, 
+                              "TauFAvg": args.regularizer_tau}
 eprop_alif_params = {"TauE": 20.0, "TauA": 2000.0, "CReg": args.regularizer_strength, "FTarget": args.regularizer_target_rate,
                      "TauFAvg": args.regularizer_tau, "Beta": 0.0174}
 eprop_pre_vars = {"ZFilter": 0.0}
@@ -176,7 +179,11 @@ if args.num_recurrent_alif > 0:
     else:
         input_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.resume_epoch))
 if args.num_recurrent_lif > 0:
-    input_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
+    if args.no_filter:
+        input_recurrent_lif_vars = {"DeltaG": 0.0}
+    else:
+        input_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
+
     if args.resume_epoch is None:
         input_recurrent_lif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(num_input_neurons)})
     else:
@@ -191,7 +198,10 @@ if not args.feedforward:
         else:
             recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
     if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
+        if args.no_filter:
+            recurrent_lif_recurrent_lif_vars = {"DeltaG": 0.0}
+        else:
+            recurrent_lif_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
         if args.resume_epoch is None:
             recurrent_lif_recurrent_lif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
         else:
@@ -269,6 +279,8 @@ input.spike_recording_enabled = args.record
 assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)
 
 # Add synapse populations
+eprop_lif_model = eprop.eprop_lif_no_filter_model if args.no_filter else eprop.eprop_lif_model
+eprop_lif_params = eprop_lif_no_filter_params if args.no_filter else eprop_lif_filter_params
 if args.num_recurrent_alif > 0:
     input_recurrent_alif = model.add_synapse_population(
         "InputRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
@@ -291,7 +303,7 @@ if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
         "InputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
         input, recurrent_lif,
-        eprop.eprop_lif_model, eprop_lif_params, input_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
+        eprop_lif_model, eprop_lif_params, input_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
         "DeltaCurr", {}, {})
     recurrent_lif_output = model.add_synapse_population(
         "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
@@ -316,7 +328,7 @@ if not args.feedforward:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
             "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
             recurrent_lif, recurrent_lif,
-            eprop.eprop_lif_model, eprop_lif_params, recurrent_lif_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
+            eprop_lif_model, eprop_lif_params, recurrent_lif_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
             "DeltaCurr", {}, {})
 
 # Add custom update for calculating initial tranpose weights

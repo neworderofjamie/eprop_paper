@@ -15,6 +15,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--learning-rate-decay-epochs", type=int, default=0)
     parser.add_argument("--log-latency-threshold", type=int, default=51)
     parser.add_argument("--log-latency-tau", type=float, default=20.0)
+    parser.add_argument("--tau-m", type=float, default=20.0)
     parser.add_argument("--regularizer-strength", type=float, default=0.001)
     parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
     parser.add_argument("--suffix", default="")

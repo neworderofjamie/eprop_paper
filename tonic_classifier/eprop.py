@@ -253,10 +253,11 @@ eprop_alif_model = genn_model.create_custom_weight_update_class(
 
 eprop_lif_model = genn_model.create_custom_weight_update_class(
     "eprop_lif",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg"],
-    derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
-                    ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
-                    ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
+    param_names=["TauE", "TauM", "CReg", "FTarget", "TauFAvg"],
+    derived_params=[("DecayE", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
+                    ("DecayM", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[1]))()),
+                    ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[3] * dt) / 1000.0)()),
+                    ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[4]))())],
     var_name_types=[("g", "scalar", VarAccess_READ_ONLY), ("eFiltered", "scalar"), ("DeltaG", "scalar")],
     pre_var_name_types=[("ZFilter", "scalar")],
     post_var_name_types=[("Psi", "scalar"), ("FAvg", "scalar")],
@@ -269,7 +270,7 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
     $(ZFilter) += 1.0;
     """,
     pre_dynamics_code="""
-    $(ZFilter) *= $(Alpha);
+    $(ZFilter) *= $(DecayM);
     """,
 
     post_spike_code="""
@@ -288,11 +289,51 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
     synapse_dynamics_code="""
     const scalar e = $(ZFilter) * $(Psi);
     scalar eFiltered = $(eFiltered);
-    eFiltered = (eFiltered * $(Alpha)) + e;
+    eFiltered = (eFiltered * $(DecayE)) + e;
     $(DeltaG) += (eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e);
     $(eFiltered) = eFiltered;
     """)
 
+eprop_lif_no_filter_model = genn_model.create_custom_weight_update_class(
+    "eprop_lif_no_filter",
+    param_names=["TauM", "CReg", "FTarget", "TauFAvg"],
+    derived_params=[("DecayM", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
+                    ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
+                    ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
+    var_name_types=[("g", "scalar", VarAccess_READ_ONLY), ("DeltaG", "scalar")],
+    pre_var_name_types=[("ZFilter", "scalar")],
+    post_var_name_types=[("Psi", "scalar"), ("FAvg", "scalar")],
+    
+    sim_code="""
+    $(addToInSyn, $(g));
+    """,
+
+    pre_spike_code="""
+    $(ZFilter) += 1.0;
+    """,
+    pre_dynamics_code="""
+    $(ZFilter) *= $(DecayM);
+    """,
+
+    post_spike_code="""
+    $(FAvg) += (1.0 - $(AlphaFAv));
+    """,
+
+    post_dynamics_code="""
+    $(FAvg) *= $(AlphaFAv);
+    if ($(RefracTime_post) > 0.0) {
+      $(Psi) = 0.0;
+    }
+    else {
+      $(Psi) = (1.0 / $(Vthresh_post)) * 0.3 * fmax(0.0, 1.0 - fabs(($(V_post) - $(Vthresh_post)) / $(Vthresh_post)));
+    }
+    """,
+
+    synapse_dynamics_code="""
+    const scalar e = $(ZFilter) * $(Psi);
+    $(DeltaG) += (e * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e);
+    """)
+    
 output_learning_model = genn_model.create_custom_weight_update_class(
     "output_learning",
     param_names=["TauE"],
