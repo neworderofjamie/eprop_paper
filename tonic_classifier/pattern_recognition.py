@@ -421,6 +421,8 @@ input_spikes = []
 recurrent_spikes = []
 output_y = []
 output_y_star = []
+deep_r_update_time = 0.0
+deep_r_reset_time = 0.0
 for trial in range(1000):
     # Reduce learning rate every 100 trials
     if (trial % 100) == 0 and trial != 0:
@@ -461,21 +463,35 @@ for trial in range(1000):
     adam_step += 1
 
     if DEEP_R:
+        deep_r_reset_start = perf_counter()
+        
         input_recurrent_deep_r.reset()
         recurrent_recurrent_deep_r.reset()
+        
+        deep_r_reset_end = perf_counter()
+        deep_r_reset_time += (deep_r_reset_end - deep_r_reset_start)
     
     # Now batch is complete, apply gradients
     model.custom_update("GradientLearn")
     
     if DEEP_R:
+        deep_r_update_start = perf_counter()
+        
         input_recurrent_deep_r.update()
         recurrent_recurrent_deep_r.update()
+        
+        deep_r_update_end = perf_counter()
+        deep_r_update_time += (deep_r_update_end - deep_r_update_start)
 
 print(f"Init: {model.init_time}")
 print(f"Init sparse: {model.init_sparse_time}")
 print(f"Neuron update: {model.neuron_update_time}")
 print(f"Presynaptic update: {model.presynaptic_update_time}")
 print(f"Synapse dynamics: {model.synapse_dynamics_time}")
+
+if DEEP_R:
+    print(f"Deep-R reset: {deep_r_reset_time}")
+    print(f"Deep-R update: {deep_r_update_time}")
 
 assert len(input_spikes) == len(recurrent_spikes)
 assert len(input_spikes) == len(output_y)
