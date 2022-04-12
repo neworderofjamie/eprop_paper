@@ -44,14 +44,32 @@ class DeepR:
         self.unpacked_conn[self.sg.get_sparse_pre_inds(),
                            self.sg.get_sparse_post_inds()] = 1
 
-                                 
         # Get views of sign change 
         self.sign_change_view = self.optimiser.extra_global_params["signChange"].view[:]
 
         # Get views to state variables
         self.sg_var_views = {n: v.view for n, v in self.sg.vars.items()}
         self.optimiser_var_views = {n: v.view for n, v in self.optimiser.vars.items()}
-      
+    
+    def plot_sparse(self, axis):
+        axis.set_title("Sparse")
+        connectivity = np.zeros((self.num_pre, self.num_post))
+        connectivity[self.sg.get_sparse_pre_inds(), 
+                     self.sg.get_sparse_post_inds()] = 1
+        axis.imshow(connectivity)
+    
+    def plot_unpacked(self, axis):
+        axis.set_title("Unpacked")
+        axis.imshow(self.unpacked_conn)
+        
+    def plot_sparse_unpacked_comparison(self, axis):
+        axis.set_title("Comparison")
+        connectivity = np.zeros((self.num_pre, self.num_post))
+        connectivity[:] = self.unpacked_conn
+        connectivity[self.sg.get_sparse_pre_inds(), 
+                     self.sg.get_sparse_post_inds()] -= 1
+        axis.imshow(connectivity)
+    
     def reset(self):
         # Zero and upload sign change
         self.sign_change_view[:] = 0
@@ -83,30 +101,31 @@ class DeepR:
 
         # Loop through rows
         for i in range(self.num_pre):
+            row_length = self.sg._row_lengths[i]
             start_id = self.sg.max_row_length * i
-            end_id = start_id + self.sg.max_row_length
+            end_id = start_id + row_length
             inds = self.sg._ind[start_id:end_id]
-            
+
             # Select inds in this row which will be made dormant
-            dormant_inds = inds[sign_change_unpack[i] == 1]
+            dormant_inds = inds[sign_change_unpack[i,:row_length] == 1]
 
             # If there are any
             num_dormant = len(dormant_inds)
             if num_dormant > 0:
-                # Decrease row length
-                assert self.sg._row_lengths[i] >= num_dormant
-                self.sg._row_lengths[i] -= num_dormant
+                # Check there is enough row left to make this many synapses dormant
+                assert row_length >= num_dormant
                 
                 # Get mask of row entries to keep
-                keep_mask = (sign_change_unpack[i] == 0)
+                keep_mask = (sign_change_unpack[i,:row_length] == 0)
                 slice_length = np.sum(keep_mask)
-                
+                assert slice_length == (row_length - num_dormant)
+            
                 # Clear dormant synapses from unpacked representation
                 self.unpacked_conn[i, dormant_inds] = 0
                 
                 # Remove inactive indices
                 self.sg._ind[start_id:start_id + slice_length] = inds[keep_mask]
-                
+           
                 # Remove inactive synapse group state vars
                 for v in self.sg_var_views.values():
                     v_row = v[start_id:end_id]
@@ -116,6 +135,9 @@ class DeepR:
                 for v in self.optimiser_var_views.values():
                     v_row = v[start_id:end_id]
                     v[start_id:start_id + slice_length] = v_row[keep_mask]
+                    
+                # Reduce row length
+                self.sg._row_lengths[i] -= num_dormant
 
         # Count number of remaining synapses
         num_synapses = np.sum(self.sg._row_lengths)
@@ -123,7 +145,6 @@ class DeepR:
         # From this, calculate how many padding synapses there are in data structure
         num_total_padding_synapses = (self.sg.max_row_length * self.num_pre) - num_synapses
 
-        print(f"{num_synapses} synapses, {num_total_padding_synapses} total padding and {total_dormant} total to activate")
         # Loop through rows of synaptic matrix
         num_activations = np.zeros(self.num_pre, dtype=int)
         for i in range(self.num_pre - 1):
