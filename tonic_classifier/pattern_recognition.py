@@ -21,9 +21,9 @@ NUM_RECURRENT = 256
 NUM_OUTPUT = 3
 
 INPUT_RECURRENT_SPARSITY = None
-RECURRENT_RECURRENT_SPARSITY = 0.01
+RECURRENT_RECURRENT_SPARSITY = None
 DEEP_R = False
-PLOT = False
+PLOT = True
         
 #----------------------------------------------------------------------------
 # Neuron models
@@ -84,6 +84,11 @@ def update_adam(learning_rate, adam_step, optimiser_custom_updates):
         o.extra_global_params["alpha"].view[:] = learning_rate
         o.extra_global_params["firstMomentScale"].view[:] = first_moment_scale
         o.extra_global_params["secondMomentScale"].view[:] = second_moment_scale
+
+def update_learning_rate(learning_rate, optimiser_custom_updates):
+    # Loop through optimisers and set
+    for o in optimiser_custom_updates:
+        o.extra_global_params["eta"].view[:] = learning_rate
 
 # ----------------------------------------------------------------------------
 # Neuron initialisation
@@ -178,7 +183,7 @@ output_recurrent = model.add_synapse_population(
 output_recurrent.ps_target_var = "ISynFeedback"
 
 recurrent_recurrent_sparse_init = (None if RECURRENT_RECURRENT_SPARSITY is None 
-                                   else genn_model.init_connectivity("FixedProbabilityNoAutapse", {"prob": RECURRENT_RECURRENT_SPARSITY}))
+                                   else genn_model.init_connectivity("FixedProbability", {"prob": RECURRENT_RECURRENT_SPARSITY}))
 recurrent_recurrent = model.add_synapse_population(
     "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG" if RECURRENT_RECURRENT_SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
     recurrent, recurrent,
@@ -199,28 +204,39 @@ recurrent_recurrent_optimiser_var_refs = {"gradient": genn_model.create_wu_var_r
                                           "variable": genn_model.create_wu_var_ref(recurrent_recurrent, "g")}
 
 
-recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
-                                                     adam_params, adam_vars, recurrent_output_optimiser_var_refs)
+#recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
+#                                                     adam_params, adam_vars, recurrent_output_optimiser_var_refs)
+recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
+                                                     {}, {}, recurrent_output_optimiser_var_refs)
+
 
 # If we're using Deep-R on input-recurrent connectivity
 if DEEP_R and INPUT_RECURRENT_SPARSITY is not None:
-    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
-                                                        adam_params, adam_vars, input_recurrent_optimiser_var_refs)
+    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_sign_track_model,
+                                                        {}, {}, input_recurrent_optimiser_var_refs)
+    #input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
+    #                                                    adam_params, adam_vars, input_recurrent_optimiser_var_refs)
     input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, 
                                    NUM_INPUT, NUM_RECURRENT, WEIGHT_0)
 else:
-    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
-                                                        adam_params, adam_vars, input_recurrent_optimiser_var_refs)
+    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
+                                                        {}, {}, input_recurrent_optimiser_var_refs)
+    #input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
+    #                                                    adam_params, adam_vars, input_recurrent_optimiser_var_refs)
 
 # If we're using Deep-R on recurrent-recurrent connectivity
 if DEEP_R and RECURRENT_RECURRENT_SPARSITY is not None:
-    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
-                                                            adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
+    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_sign_track_model,
+                                                            {}, {}, recurrent_recurrent_optimiser_var_refs)
+    #recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
+    #                                                        adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
     recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, 
                                        NUM_RECURRENT, NUM_RECURRENT, WEIGHT_0)
 else:
-    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
-                                                            adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
+    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
+                                                            {}, {}, recurrent_recurrent_optimiser_var_refs)
+    #recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
+    #                                                        adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
 
 
 # Build model
@@ -241,8 +257,8 @@ if DEEP_R:
 # Loop through trials
 output_y_view = output.vars["Y"].view
 output_y_star_view = output.vars["YStar"].view
-learning_rate = 0.003
-adam_step = 1
+learning_rate = 1E-5
+#adam_step = 1
 input_spikes = []
 recurrent_spikes = []
 output_y = []
@@ -253,9 +269,9 @@ for trial in range(1000):
     if (trial % 100) == 0 and trial != 0:
         print(f"Trial {trial}")
         learning_rate *= 0.7
-
-    #record_trial = ((trial % 100) == 0)
-    record_trial = (trial == 999)
+        
+    record_trial = ((trial % 100) == 0)
+    #record_trial = (trial == 999)
 
     # Reset time
     model.timestep = 0
@@ -282,11 +298,14 @@ for trial in range(1000):
         input_spikes.append(input.spike_recording_data)
         recurrent_spikes.append(recurrent.spike_recording_data)
 
+    update_learning_rate(learning_rate, [input_recurrent_optimiser,
+                                         recurrent_output_optimiser,
+                                         recurrent_recurrent_optimiser])
     # Update Adam optimiser scaling factors
-    update_adam(learning_rate, adam_step, [input_recurrent_optimiser,
-                                           recurrent_output_optimiser,
-                                           recurrent_recurrent_optimiser])
-    adam_step += 1
+    #update_adam(learning_rate, adam_step, [input_recurrent_optimiser,
+    #                                       recurrent_output_optimiser,
+    #                                       recurrent_recurrent_optimiser])
+    #adam_step += 1
 
     if DEEP_R:
         deep_r_reset_start = perf_counter()

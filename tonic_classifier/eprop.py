@@ -66,6 +66,16 @@ adam_optimizer_zero_gradient_sign_track_model = genn_model.create_custom_custom_
     }
     """)
 
+gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_class(
+    "gradient_descent_zero_gradient",
+    extra_global_params=[("eta", "scalar")],
+    var_refs=[("gradient", "scalar"), ("variable", "scalar")],
+    update_code="""
+    // Descend!
+    $(variable) -= $(eta) * $(gradient);
+    // Zero gradient
+    $(gradient) = 0.0;
+    """)
 
 gradient_batch_reduce_model = genn_model.create_custom_custom_update_class(
     "gradient_batch_reduce",
