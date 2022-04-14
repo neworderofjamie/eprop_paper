@@ -56,14 +56,16 @@ adam_optimizer_zero_gradient_sign_track_model = genn_model.create_custom_custom_
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
     // Add gradient to variable, scaled by learning rate
     const int variableSign = signbit($(variable));
+    const bool variableNonZero = ($(variable) != 0.0);
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
     // Zero gradient
     $(gradient) = 0.0;
     // If sign changes, set bit
-    if(signbit($(variable)) != variableSign) {
+    if(variableNonZero && signbit($(variable)) != variableSign) {
         atomicOr(&$(signChange)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
     }
     """)
+
 
 gradient_batch_reduce_model = genn_model.create_custom_custom_update_class(
     "gradient_batch_reduce",

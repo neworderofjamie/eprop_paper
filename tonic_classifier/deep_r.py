@@ -164,11 +164,7 @@ class DeepR:
 
                 # Initialise synapse group state variables
                 for n, v in self.sg_var_views.items():
-                    if n == "g":
-                        v[new_syn_start_ind:new_syn_end_ind] =\
-                            np.random.normal(0.0, self.weight_sd, num_activations[i])
-                    else:
-                        v[new_syn_start_ind:new_syn_end_ind] = 0
+                     v[new_syn_start_ind:new_syn_end_ind] = 0
                 
                 # Initialise optimiser state variables
                 for v in self.optimiser_var_views.values():
