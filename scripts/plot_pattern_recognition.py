@@ -100,10 +100,18 @@ perf_axis.bar(bar_x, presynaptic_update_mean, width=0.4, bottom=neuron_update_me
 perf_axis.bar(bar_x, synapse_dynamics_mean, width=0.4, 
               bottom=np.add(neuron_update_mean, presynaptic_update_mean))
 
+perf_axis.set_ylabel("Time [s]")
+perf_axis.set_xlabel("Sparsity")
+perf_axis.set_xticks(tick_x)
+perf_axis.set_xticklabels(sparsity)
 
-#perf_axis.bar(sparse_sparse_x, sparse_sparse_synapse_dynamics[0], width=0.4, bottom=)
-#perf_axis.bar(dense_sparse_x, dense_sparse_synapse_dynamics[0], width=0.4)
+# Remove axis junk
+sns.despine(ax=perf_axis)
+perf_axis.xaxis.grid(False)
 
+#perf_fig.legend([sparse_sparse, dense_sparse], ["Sparse, sparse", "Dense, sparse"],
+#                loc="lower center", ncol=2)
+perf_fig.tight_layout(pad=0)#, rect=[0.0, 0.0 if plot_settings.presentation else 0.075, 1.0, 1.0])
 
 
 plt.show()
