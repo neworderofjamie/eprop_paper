@@ -6,6 +6,16 @@ from pygenn.genn_wrapper.Models import (VarAccess_READ_ONLY,
                                         VarAccess_REDUCE_BATCH_SUM)
 
 # ----------------------------------------------------------------------------
+# Var init snippets
+# ----------------------------------------------------------------------------
+absolute_normal_snippet = genn_model.create_custom_init_var_snippet_class(
+    "absolute_normal",
+    param_names=["mean", "sd"],
+    var_init_code="""
+    $(value) = fabs($(mean) + ($(gennrand_normal) * $(sd)));
+    """)
+
+# ----------------------------------------------------------------------------
 # Custom models
 # ----------------------------------------------------------------------------
 adam_optimizer_model = genn_model.create_custom_custom_update_class(
@@ -42,30 +52,6 @@ adam_optimizer_zero_gradient_model = genn_model.create_custom_custom_update_clas
     $(gradient) = 0.0;
     """)
 
-adam_optimizer_zero_gradient_sign_track_model = genn_model.create_custom_custom_update_class(
-    "adam_optimizer_zero_gradient_sign_track",
-    param_names=["beta1", "beta2", "epsilon"],
-    var_name_types=[("m", "scalar"), ("v", "scalar")],
-    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
-                         ("secondMomentScale", "scalar"), ("signChange", "uint32_t*")],
-    var_refs=[("gradient", "scalar"), ("variable", "scalar")],
-    update_code="""
-    // Update biased first moment estimate
-    $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
-    // Update biased second moment estimate
-    $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
-    // Add gradient to variable, scaled by learning rate
-    const int variableSign = signbit($(variable));
-    const bool variableNonZero = ($(variable) != 0.0);
-    $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
-    // Zero gradient
-    $(gradient) = 0.0;
-    // If sign changes, set bit
-    if(variableNonZero && signbit($(variable)) != variableSign) {
-        atomicOr(&$(signChange)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
-    }
-    """)
-
 gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_class(
     "gradient_descent_zero_gradient",
     extra_global_params=[("eta", "scalar")],
@@ -79,26 +65,19 @@ gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_cl
 
 gradient_descent_zero_gradient_track_dormant_model = genn_model.create_custom_custom_update_class(
     "gradient_descent_zero_gradient",
-    param_names=["CL1"],
     extra_global_params=[("eta", "scalar"), ("dormant", "uint32_t*")],
     var_refs=[("gradient", "scalar"), ("variable", "scalar")],
     update_code="""
-    // **HACK** get sign
-    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
-
     const bool variableNonZero = ($(variable) != 0.0);
 
     // Descend!
-    $(variable) -= $(eta) * sign * $(gradient);
-
-    // Apply L1 regularization
-    $(variable) -= $(eta) * $(CL1);
+    $(variable) -= $(eta) * $(gradient);
     
     // Zero gradient
     $(gradient) = 0.0;
     
-    // If variable started out non zero but has now gone negative, mark as dormant
-    if(variableNonZero && $(variable) <= 0.0) {
+    // If variable started out non-zero but has now gone negative, mark as dormant
+    if(variableNonZero && $(variable) < 0.0) {
         atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
     }
     """)
@@ -333,7 +312,7 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
 
 eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     "eprop_lif_deep_r",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg"],
+    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "CL1"],
     derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
                     ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
                     ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
@@ -343,7 +322,7 @@ eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     
     sim_code="""
     const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
-    $(addToInSyn, $(sign) * $(g));
+    $(addToInSyn, sign * $(g));
     """,
 
     pre_spike_code="""
@@ -367,10 +346,13 @@ eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     """,
 
     synapse_dynamics_code="""
+    // **HACK** get sign
+    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
+    
     const scalar e = $(ZFilter) * $(Psi);
     scalar eFiltered = $(eFiltered);
     eFiltered = (eFiltered * $(Alpha)) + e;
-    $(DeltaG) += (eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e);
+    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e)) + $(CL1);
     $(eFiltered) = eFiltered;
     """)
     

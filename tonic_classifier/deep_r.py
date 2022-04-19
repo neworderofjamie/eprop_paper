@@ -1,6 +1,6 @@
 import numpy as np
 
-DEBUG = True
+DEBUG = False
 
 class DeepR:
     def __init__(self, sg, optimiser, num_pre, num_post, weight_0):
@@ -128,6 +128,7 @@ class DeepR:
 
         # Count number of remaining synapses
         num_synapses = np.sum(self.sg._row_lengths)
+        #print(f"De-activating and re-activating {total_dormant} synapses")
 
         if DEBUG:
             # Check we've removed all dormant synapses
