@@ -366,12 +366,12 @@ for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output
     # Loop through output axes
     if args.plot:
         col_axes = axes if len(output_y) == 1 else axes[:, i]
-    total_mse = 0.0
+    error = []
     for a in range(3):
         # Calculate error and hence MSE
-        error = y[:,a] - y_star[:,a]
-        mse = np.sum(error * error) / len(error)
-        total_mse += mse
+        error.append(y[:,a] - y_star[:,a])
+        mse = np.sum(error[-1] * error[-1]) / len(error[-1])
+        #total_mse += mse
     
         if args.plot:
             # YA and YA*
@@ -379,7 +379,8 @@ for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output
             col_axes[a].plot(y_star[:,a])
             
             col_axes[a].set_title(f"Y{a} (MSE={mse:.2f})")
-        
+    error = np.hstack(error)
+    total_mse = np.sum(error * error) / len(error)
     print(f"{i}: Total MSE: {total_mse}")
     
     if args.plot:
