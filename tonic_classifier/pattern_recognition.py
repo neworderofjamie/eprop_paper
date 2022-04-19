@@ -15,7 +15,7 @@ from deep_r import DeepR
 ADAM_BETA1 = 0.9
 ADAM_BETA2 = 0.999
 
-C_L1 = 0.001
+C_L1 = 0.01
 
 WEIGHT_0 = 1.0
 
