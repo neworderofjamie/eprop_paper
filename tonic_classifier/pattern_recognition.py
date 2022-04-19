@@ -2,6 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
+from argparse import ArgumentParser
 from time import perf_counter
 from pygenn import genn_model
 from pygenn.genn_wrapper import NO_DELAY
@@ -22,11 +23,14 @@ NUM_INPUT = 20
 NUM_RECURRENT = 256
 NUM_OUTPUT = 3
 
-INPUT_RECURRENT_SPARSITY = None
-RECURRENT_RECURRENT_SPARSITY = 0.1
-DEEP_R = False
-PLOT = True
-        
+parser = ArgumentParser(description="Pattern recognition")
+parser.add_argument("--deep-r", action="store_true")
+parser.add_argument("--plot", action="store_true")
+parser.add_argument("--input-recurrent-sparsity", type=float, default=1.0)
+parser.add_argument("--recurrent-recurrent-sparsity", type=float, default=1.0)
+
+args = parser.parse_args()
+
 #----------------------------------------------------------------------------
 # Neuron models
 #----------------------------------------------------------------------------
@@ -164,12 +168,14 @@ input.spike_recording_enabled = True
 recurrent.spike_recording_enabled = True
 
 # Add synapse populations
-input_recurrent_sparse_init = (None if INPUT_RECURRENT_SPARSITY is None 
-                               else genn_model.init_connectivity("FixedProbability", {"prob": INPUT_RECURRENT_SPARSITY}))
+sparse_input_recurrent = (args.input_recurrent_sparsity != 1.0)
+input_recurrent_sparse_init = (genn_model.init_connectivity("FixedProbability", 
+                                                            {"prob": args.input_recurrent_sparsity}) if sparse_input_recurrent
+                               else None)
 input_recurrent = model.add_synapse_population(
-    "InputRecurrentLIF", "DENSE_INDIVIDUALG" if INPUT_RECURRENT_SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
+    "InputRecurrentLIF", "SPARSE_INDIVIDUALG" if sparse_input_recurrent else "DENSE_INDIVIDUALG", NO_DELAY,
     input, recurrent,
-    eprop.eprop_lif_deep_r_model if DEEP_R and INPUT_RECURRENT_SPARSITY is not None else eprop.eprop_lif_model, 
+    eprop.eprop_lif_deep_r_model if args.deep_r and sparse_input_recurrent else eprop.eprop_lif_model, 
     eprop_lif_params, input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
     "DeltaCurr", {}, {},
     input_recurrent_sparse_init)
@@ -186,12 +192,14 @@ output_recurrent = model.add_synapse_population(
     "DeltaCurr", {}, {})
 output_recurrent.ps_target_var = "ISynFeedback"
 
-recurrent_recurrent_sparse_init = (None if RECURRENT_RECURRENT_SPARSITY is None 
-                                   else genn_model.init_connectivity("FixedProbability", {"prob": RECURRENT_RECURRENT_SPARSITY}))
+sparse_recurrent_recurrent = (args.recurrent_recurrent_sparsity != 1.0)
+recurrent_recurrent_sparse_init = (genn_model.init_connectivity("FixedProbability",
+                                                                {"prob": args.recurrent_recurrent_sparsity}) if sparse_recurrent_recurrent
+                                   else None)
 recurrent_recurrent = model.add_synapse_population(
-    "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG" if RECURRENT_RECURRENT_SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
+    "RecurrentLIFRecurrentLIF", "SPARSE_INDIVIDUALG" if sparse_recurrent_recurrent else "DENSE_INDIVIDUALG", NO_DELAY,
     recurrent, recurrent,
-    eprop.eprop_lif_deep_r_model if DEEP_R and INPUT_RECURRENT_SPARSITY is not None else eprop.eprop_lif_model, 
+    eprop.eprop_lif_deep_r_model if args.deep_r and sparse_recurrent_recurrent else eprop.eprop_lif_model, 
     eprop_lif_params, recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
     "DeltaCurr", {}, {},
     recurrent_recurrent_sparse_init)
@@ -216,7 +224,7 @@ recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optim
 
 
 # If we're using Deep-R on input-recurrent connectivity
-if DEEP_R and INPUT_RECURRENT_SPARSITY is not None:
+if args.deep_r and sparse_input_recurrent:
     input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                         deep_r_params, {}, input_recurrent_optimiser_var_refs)
     #input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
@@ -230,7 +238,7 @@ else:
     #                                                    adam_params, adam_vars, input_recurrent_optimiser_var_refs)
 
 # If we're using Deep-R on recurrent-recurrent connectivity
-if DEEP_R and RECURRENT_RECURRENT_SPARSITY is not None:
+if args.deep_r and sparse_recurrent_recurrent:
     recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                             deep_r_params, {}, recurrent_recurrent_optimiser_var_refs)
     #recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
@@ -252,10 +260,10 @@ model.load(num_recording_timesteps=1000)
 # Calculate initial transpose feedback weights
 model.custom_update("CalculateTranspose")
 
-if DEEP_R:
-    if INPUT_RECURRENT_SPARSITY is not None:
+if args.deep_r:
+    if sparse_input_recurrent:
         input_recurrent_deep_r.load()
-    if RECURRENT_RECURRENT_SPARSITY is not None:
+    if sparse_recurrent_recurrent:
         recurrent_recurrent_deep_r.load()
     
 # Loop through trials
@@ -311,12 +319,12 @@ for trial in range(1000):
     #                                       recurrent_recurrent_optimiser])
     #adam_step += 1
 
-    if DEEP_R:
+    if args.deep_r:
         deep_r_reset_start = perf_counter()
         
-        if INPUT_RECURRENT_SPARSITY is not None:
+        if sparse_input_recurrent:
             input_recurrent_deep_r.reset()
-        if RECURRENT_RECURRENT_SPARSITY is not None:
+        if sparse_recurrent_recurrent:
             recurrent_recurrent_deep_r.reset()
         
         deep_r_reset_end = perf_counter()
@@ -325,12 +333,12 @@ for trial in range(1000):
     # Now batch is complete, apply gradients
     model.custom_update("GradientLearn")
     
-    if DEEP_R:
+    if args.deep_r:
         deep_r_update_start = perf_counter()
         
-        if INPUT_RECURRENT_SPARSITY is not None:
+        if sparse_input_recurrent:
             input_recurrent_deep_r.update()
-        if RECURRENT_RECURRENT_SPARSITY is not None:
+        if sparse_recurrent_recurrent:
             recurrent_recurrent_deep_r.update()
         
         deep_r_update_end = perf_counter()
@@ -342,7 +350,7 @@ print(f"Neuron update: {model.neuron_update_time}")
 print(f"Presynaptic update: {model.presynaptic_update_time}")
 print(f"Synapse dynamics: {model.synapse_dynamics_time}")
 
-if DEEP_R:
+if args.deep_r:
     print(f"Deep-R: {deep_r_time}")
 
 assert len(input_spikes) == len(recurrent_spikes)
@@ -350,13 +358,13 @@ assert len(input_spikes) == len(output_y)
 assert len(input_spikes) == len(output_y_star)
 
 # Create plot
-if PLOT:
+if args.plot:
     figure, axes = plt.subplots(5, len(output_y), sharex="col", sharey="row")
 
 # Loop through recorded trials
 for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output_y, output_y_star)):
     # Loop through output axes
-    if PLOT:
+    if args.plot:
         col_axes = axes if len(output_y) == 1 else axes[:, i]
     total_mse = 0.0
     for a in range(3):
@@ -365,7 +373,7 @@ for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output
         mse = np.sum(error * error) / len(error)
         total_mse += mse
     
-        if PLOT:
+        if args.plot:
             # YA and YA*
             col_axes[a].plot(y[:,a])
             col_axes[a].plot(y_star[:,a])
@@ -374,12 +382,12 @@ for i, (s, r, y, y_star) in enumerate(zip(input_spikes, recurrent_spikes, output
         
     print(f"{i}: Total MSE: {total_mse}")
     
-    if PLOT:
+    if args.plot:
         # Input and recurrent spikes
         col_axes[3].scatter(s[0], s[1], s=1)
         col_axes[4].scatter(r[0], r[1], s=1)
 
-if PLOT:
+if args.plot:
     col_axes = axes if len(output_y) == 1 else axes[:, 0]
     col_axes[0].set_ylim((-3.0, 3.0))
     col_axes[1].set_ylim((-3.0, 3.0))
