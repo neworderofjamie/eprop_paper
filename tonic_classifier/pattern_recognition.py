@@ -14,6 +14,8 @@ from deep_r import DeepR
 ADAM_BETA1 = 0.9
 ADAM_BETA2 = 0.999
 
+C_L1 = 0.01
+
 WEIGHT_0 = 1.0
 
 NUM_INPUT = 20
@@ -21,7 +23,7 @@ NUM_RECURRENT = 256
 NUM_OUTPUT = 3
 
 INPUT_RECURRENT_SPARSITY = None
-RECURRENT_RECURRENT_SPARSITY = None
+RECURRENT_RECURRENT_SPARSITY = 0.1
 DEEP_R = False
 PLOT = True
         
@@ -136,6 +138,7 @@ recurrent_output_vars = {"DeltaG": 0.0,
 # Optimiser initialisation
 adam_params = {"beta1": ADAM_BETA1, "beta2": ADAM_BETA2, "epsilon": 1E-8}
 adam_vars = {"m": 0.0, "v": 0.0}
+deep_r_params = {"CL1": C_L1}
 
 # ----------------------------------------------------------------------------
 # Model description
@@ -166,7 +169,8 @@ input_recurrent_sparse_init = (None if INPUT_RECURRENT_SPARSITY is None
 input_recurrent = model.add_synapse_population(
     "InputRecurrentLIF", "DENSE_INDIVIDUALG" if INPUT_RECURRENT_SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
     input, recurrent,
-    eprop.eprop_lif_model, eprop_lif_params, input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
+    eprop.eprop_lif_deep_r_model if DEEP_R and INPUT_RECURRENT_SPARSITY is not None else eprop.eprop_lif_model, 
+    eprop_lif_params, input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
     "DeltaCurr", {}, {},
     input_recurrent_sparse_init)
 
@@ -187,7 +191,8 @@ recurrent_recurrent_sparse_init = (None if RECURRENT_RECURRENT_SPARSITY is None
 recurrent_recurrent = model.add_synapse_population(
     "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG" if RECURRENT_RECURRENT_SPARSITY is None else "SPARSE_INDIVIDUALG", NO_DELAY,
     recurrent, recurrent,
-    eprop.eprop_lif_model, eprop_lif_params, recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
+    eprop.eprop_lif_deep_r_model if DEEP_R and INPUT_RECURRENT_SPARSITY is not None else eprop.eprop_lif_model, 
+    eprop_lif_params, recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
     "DeltaCurr", {}, {},
     recurrent_recurrent_sparse_init)
 
@@ -212,8 +217,8 @@ recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optim
 
 # If we're using Deep-R on input-recurrent connectivity
 if DEEP_R and INPUT_RECURRENT_SPARSITY is not None:
-    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_sign_track_model,
-                                                        {}, {}, input_recurrent_optimiser_var_refs)
+    input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
+                                                        deep_r_params, {}, input_recurrent_optimiser_var_refs)
     #input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
     #                                                    adam_params, adam_vars, input_recurrent_optimiser_var_refs)
     input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, 
@@ -226,8 +231,8 @@ else:
 
 # If we're using Deep-R on recurrent-recurrent connectivity
 if DEEP_R and RECURRENT_RECURRENT_SPARSITY is not None:
-    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_sign_track_model,
-                                                            {}, {}, recurrent_recurrent_optimiser_var_refs)
+    recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
+                                                            deep_r_params, {}, recurrent_recurrent_optimiser_var_refs)
     #recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_sign_track_model,
     #                                                        adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
     recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, 
@@ -241,7 +246,6 @@ else:
 
 # Build model
 model.build()
-
 
 model.load(num_recording_timesteps=1000)
 
@@ -266,7 +270,7 @@ output_y_star = []
 deep_r_time = 0.0
 for trial in range(1000):
     # Reduce learning rate every 100 trials
-    if (trial % 100) == 0 and trial != 0:
+    if (trial % 200) == 0 and trial != 0:
         print(f"Trial {trial}")
         learning_rate *= 0.7
         

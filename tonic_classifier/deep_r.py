@@ -1,5 +1,7 @@
 import numpy as np
 
+DEBUG = True
+
 class DeepR:
     def __init__(self, sg, optimiser, num_pre, num_post, weight_0):
         self.sg = sg
@@ -10,7 +12,7 @@ class DeepR:
         
         # Zero all bitmask EGPs
         num_words = int(np.ceil((num_pre * sg.max_row_length) / 32))
-        optimiser.extra_global_params["signChange"].set_values(
+        optimiser.extra_global_params["dormant"].set_values(
             np.zeros(num_words, dtype=np.uint32))
 
     
@@ -22,8 +24,8 @@ class DeepR:
         self.unpacked_conn[self.sg.get_sparse_pre_inds(),
                            self.sg.get_sparse_post_inds()] = 1
 
-        # Get views of sign change 
-        self.sign_change_view = self.optimiser.extra_global_params["signChange"].view[:]
+        # Get views of dormant flags
+        self.dormant_view = self.optimiser.extra_global_params["dormant"].view[:]
 
         # Get views to state variables
         self.sg_var_views = {n: v.view for n, v in self.sg.vars.items()}
@@ -49,25 +51,25 @@ class DeepR:
         axis.imshow(connectivity)
     
     def reset(self):
-        # Zero and upload sign change
-        self.sign_change_view[:] = 0
-        self.optimiser.push_extra_global_param_to_device("signChange")
+        # Zero and upload dormancy flags
+        self.dormant_view[:] = 0
+        self.optimiser.push_extra_global_param_to_device("dormant")
    
     def update(self):
-        # Download sign change
-        self.optimiser.pull_extra_global_param_from_device("signChange")
+        # Download dormancy flags
+        self.optimiser.pull_extra_global_param_from_device("dormant")
 
         # Unpack sign change bitmasks
-        sign_change_unpack = np.unpackbits(
-            self.sign_change_view.view(dtype=np.uint8), 
+        dormant_unpack = np.unpackbits(
+            self.dormant_view.view(dtype=np.uint8), 
             count=self.num_pre * self.sg.max_row_length, bitorder="little")
         
         # Reshape
-        sign_change_unpack = np.reshape(sign_change_unpack, 
-                                        (self.num_pre, self.sg.max_row_length))
+        dormant_unpack = np.reshape(dormant_unpack, 
+                                    (self.num_pre, self.sg.max_row_length))
         
         # Count dormant synapses
-        total_dormant = np.sum(sign_change_unpack)
+        total_dormant = np.sum(dormant_unpack)
 
         # If no synapses have been made dormant, no need to do anything further
         if total_dormant == 0:
@@ -77,6 +79,9 @@ class DeepR:
         self.optimiser.pull_state_from_device()
         self.sg.pull_state_from_device()
 
+        if DEBUG:
+            num_start_synapses = np.sum(self.sg._row_lengths)
+        
         # Loop through rows
         for i in range(self.num_pre):
             row_length = self.sg._row_lengths[i]
@@ -84,8 +89,12 @@ class DeepR:
             end_id = start_id + row_length
             inds = self.sg._ind[start_id:end_id]
 
+            if DEBUG:
+                # Check that there are no synapses marked as dormant beyond end of row
+                assert np.sum(dormant_unpack[i, row_length:]) == 0
+
             # Select inds in this row which will be made dormant
-            dormant_inds = inds[sign_change_unpack[i,:row_length] == 1]
+            dormant_inds = inds[np.where(dormant_unpack[i,:row_length] == 1)]
 
             # If there are any
             num_dormant = len(dormant_inds)
@@ -94,7 +103,7 @@ class DeepR:
                 assert row_length >= num_dormant
                 
                 # Get mask of row entries to keep
-                keep_mask = (sign_change_unpack[i,:row_length] == 0)
+                keep_mask = (dormant_unpack[i,:row_length] == 0)
                 slice_length = np.sum(keep_mask)
                 assert slice_length == (row_length - num_dormant)
             
@@ -120,6 +129,10 @@ class DeepR:
         # Count number of remaining synapses
         num_synapses = np.sum(self.sg._row_lengths)
 
+        if DEBUG:
+            # Check we've removed all dormant synapses
+            assert num_synapses == (num_start_synapses - total_dormant)
+
         # From this, calculate how many padding synapses there are in data structure
         num_total_padding_synapses = (self.sg.max_row_length * self.num_pre) - num_synapses
 
@@ -127,7 +140,6 @@ class DeepR:
         num_activations = np.zeros(self.num_pre, dtype=int)
         for i in range(self.num_pre - 1):
             num_row_padding_synapses = self.sg.max_row_length - self.sg._row_lengths[i]
-            
             if num_row_padding_synapses > 0 and num_total_padding_synapses > 0:
                 probability = num_row_padding_synapses / num_total_padding_synapses
                 
@@ -172,6 +184,10 @@ class DeepR:
             
                 # Update row length
                 self.sg._row_lengths[i] += num_activations[i]
+
+        if DEBUG:
+            # Check total number of synapses remains unchanged
+            assert np.sum(self.sg._row_lengths) == num_start_synapses
 
         # Upload optimiser and synapse group state
         self.optimiser.push_state_to_device()

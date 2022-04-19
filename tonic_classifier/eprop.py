@@ -77,6 +77,32 @@ gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_cl
     $(gradient) = 0.0;
     """)
 
+gradient_descent_zero_gradient_track_dormant_model = genn_model.create_custom_custom_update_class(
+    "gradient_descent_zero_gradient",
+    param_names=["CL1"],
+    extra_global_params=[("eta", "scalar"), ("dormant", "uint32_t*")],
+    var_refs=[("gradient", "scalar"), ("variable", "scalar")],
+    update_code="""
+    // **HACK** get sign
+    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
+
+    const bool variableNonZero = ($(variable) != 0.0);
+
+    // Descend!
+    $(variable) -= $(eta) * sign * $(gradient);
+
+    // Apply L1 regularization
+    $(variable) -= $(eta) * $(CL1);
+    
+    // Zero gradient
+    $(gradient) = 0.0;
+    
+    // If variable started out non zero but has now gone negative, mark as dormant
+    if(variableNonZero && $(variable) <= 0.0) {
+        atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
+    }
+    """)
+
 gradient_batch_reduce_model = genn_model.create_custom_custom_update_class(
     "gradient_batch_reduce",
     var_name_types=[("reducedGradient", "scalar", VarAccess_REDUCE_BATCH_SUM)],
@@ -305,6 +331,49 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
     $(eFiltered) = eFiltered;
     """)
 
+eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
+    "eprop_lif_deep_r",
+    param_names=["TauE", "CReg", "FTarget", "TauFAvg"],
+    derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
+                    ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
+                    ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
+    var_name_types=[("g", "scalar", VarAccess_READ_ONLY), ("eFiltered", "scalar"), ("DeltaG", "scalar")],
+    pre_var_name_types=[("ZFilter", "scalar")],
+    post_var_name_types=[("Psi", "scalar"), ("FAvg", "scalar")],
+    
+    sim_code="""
+    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
+    $(addToInSyn, $(sign) * $(g));
+    """,
+
+    pre_spike_code="""
+    $(ZFilter) += 1.0;
+    """,
+    pre_dynamics_code="""
+    $(ZFilter) *= $(Alpha);
+    """,
+
+    post_spike_code="""
+    $(FAvg) += (1.0 - $(AlphaFAv));
+    """,
+    post_dynamics_code="""
+    $(FAvg) *= $(AlphaFAv);
+    if ($(RefracTime_post) > 0.0) {
+      $(Psi) = 0.0;
+    }
+    else {
+      $(Psi) = (1.0 / $(Vthresh_post)) * 0.3 * fmax(0.0, 1.0 - fabs(($(V_post) - $(Vthresh_post)) / $(Vthresh_post)));
+    }
+    """,
+
+    synapse_dynamics_code="""
+    const scalar e = $(ZFilter) * $(Psi);
+    scalar eFiltered = $(eFiltered);
+    eFiltered = (eFiltered * $(Alpha)) + e;
+    $(DeltaG) += (eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e);
+    $(eFiltered) = eFiltered;
+    """)
+    
 output_learning_model = genn_model.create_custom_weight_update_class(
     "output_learning",
     param_names=["TauE"],
