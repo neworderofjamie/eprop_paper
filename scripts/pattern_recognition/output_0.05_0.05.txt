@@ -4,21 +4,21 @@ Trial 200
 Trial 400
 Trial 600
 Trial 800
-Init: 7.27040022611618e-05
-Init sparse: 0.00020582400262355804
-Neuron update: 4.957974429276123
-Presynaptic update: 4.666914562063354
-Synapse dynamics: 5.833094111383828
-0: Total MSE: 2.322493326822917
-1: Total MSE: 1.2360000813802083
-2: Total MSE: 1.17628857421875
-3: Total MSE: 1.1658204752604167
-4: Total MSE: 1.16751611328125
-5: Total MSE: 1.1629498697916667
-6: Total MSE: 1.1540484212239583
-7: Total MSE: 1.1436832682291667
-8: Total MSE: 1.1501793619791667
-9: Total MSE: 1.1429497884114583
+Init: 7.577600330114365e-05
+Init sparse: 0.0002027519941329956
+Neuron update: 5.251671725796595
+Presynaptic update: 5.377214295037168
+Synapse dynamics: 5.698123243866445
+0: Total MSE: 1.9894501953125
+1: Total MSE: 0.7660917154947917
+2: Total MSE: 0.4487932535807292
+3: Total MSE: 0.33260809326171875
+4: Total MSE: 0.34335628255208334
+5: Total MSE: 0.367865966796875
+6: Total MSE: 0.3671547444661458
+7: Total MSE: 0.34930615234375
+8: Total MSE: 0.3190251668294271
+9: Total MSE: 0.27201765950520834
 swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
 make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
 make: Nothing to be done for 'all'.
@@ -27,21 +27,21 @@ Trial 200
 Trial 400
 Trial 600
 Trial 800
-Init: 6.553599983453751e-05
-Init sparse: 0.0001780800074338913
-Neuron update: 4.95336427174945
-Presynaptic update: 4.670878182244271
-Synapse dynamics: 5.845945339203255
-0: Total MSE: 3.7897721354166665
-1: Total MSE: 3.23430078125
-2: Total MSE: 3.1771259765625
-3: Total MSE: 3.1435406901041665
-4: Total MSE: 3.1309274088541668
-5: Total MSE: 3.1190869140625
-6: Total MSE: 3.106802083333333
-7: Total MSE: 3.0456018880208333
-8: Total MSE: 3.0365188802083334
-9: Total MSE: 3.0269811197916665
+Init: 6.656000018119811e-05
+Init sparse: 0.00017817600071430207
+Neuron update: 5.27974632811981
+Presynaptic update: 5.621898445159396
+Synapse dynamics: 5.684011081541153
+0: Total MSE: 3.6018971354166665
+1: Total MSE: 2.6420436197916666
+2: Total MSE: 1.3467412109375
+3: Total MSE: 0.41717724609375
+4: Total MSE: 0.748721435546875
+5: Total MSE: 0.6159476318359375
+6: Total MSE: 0.459485107421875
+7: Total MSE: 0.6873841959635417
+8: Total MSE: 0.4315130208333333
+9: Total MSE: 0.39456559244791667
 swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
 make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
 make: Nothing to be done for 'all'.
@@ -50,21 +50,21 @@ Trial 200
 Trial 400
 Trial 600
 Trial 800
-Init: 6.553599983453751e-05
-Init sparse: 0.0001802240014076233
-Neuron update: 4.9274839655585225
-Presynaptic update: 4.665229220017968
-Synapse dynamics: 5.860672900491548
-0: Total MSE: 3.9551298828125
-1: Total MSE: 2.2569694010416668
-2: Total MSE: 2.20328076171875
-3: Total MSE: 2.1952770182291665
-4: Total MSE: 2.1757626953125
-5: Total MSE: 2.1617625325520833
-6: Total MSE: 2.1588797200520835
-7: Total MSE: 2.16746923828125
-8: Total MSE: 2.1341100260416668
-9: Total MSE: 2.1108811848958333
+Init: 6.656000018119811e-05
+Init sparse: 0.00017919999361038207
+Neuron update: 5.285256812157961
+Presynaptic update: 5.565132868124945
+Synapse dynamics: 5.702532246100216
+0: Total MSE: 2.835755859375
+1: Total MSE: 1.8751761067708332
+2: Total MSE: 1.3922254231770834
+3: Total MSE: 1.0275987141927083
+4: Total MSE: 1.0930619303385416
+5: Total MSE: 0.9687840983072916
+6: Total MSE: 0.487029541015625
+7: Total MSE: 0.7973763020833333
+8: Total MSE: 1.1330899251302082
+9: Total MSE: 1.1130598958333333
 swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
 make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
 make: Nothing to be done for 'all'.
@@ -73,21 +73,21 @@ Trial 200
 Trial 400
 Trial 600
 Trial 800
-Init: 6.553599983453751e-05
-Init sparse: 0.0001802240014076233
-Neuron update: 4.953158255185485
-Presynaptic update: 4.678901029062393
-Synapse dynamics: 5.8025276665120815
-0: Total MSE: 3.971896158854167
-1: Total MSE: 3.1334462890625
-2: Total MSE: 3.0567060546875
-3: Total MSE: 3.0065950520833336
-4: Total MSE: 2.9800895182291667
-5: Total MSE: 2.9935940755208335
-6: Total MSE: 2.9446067708333334
-7: Total MSE: 2.9119925130208335
-8: Total MSE: 2.9137786458333332
-9: Total MSE: 2.8572864583333333
+Init: 6.656000018119811e-05
+Init sparse: 0.0001822720021009445
+Neuron update: 5.32133035127395
+Presynaptic update: 5.5521328342173915
+Synapse dynamics: 5.740972701117047
+0: Total MSE: 2.443301432291667
+1: Total MSE: 1.7234541015625
+2: Total MSE: 1.15886083984375
+3: Total MSE: 0.70626025390625
+4: Total MSE: 0.5320411376953125
+5: Total MSE: 0.6667820638020834
+6: Total MSE: 0.394101318359375
+7: Total MSE: 0.22836136881510416
+8: Total MSE: 0.4526180419921875
+9: Total MSE: 0.339370849609375
 swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
 make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
 make: Nothing to be done for 'all'.
@@ -96,19 +96,19 @@ Trial 200
 Trial 400
 Trial 600
 Trial 800
-Init: 6.460800021886826e-05
-Init sparse: 0.0001884160041809082
-Neuron update: 4.842555656963429
-Presynaptic update: 4.707435113100714
-Synapse dynamics: 5.816212083449224
-0: Total MSE: 2.5216490885416665
-1: Total MSE: 1.5593974609375
-2: Total MSE: 1.5369677734375
-3: Total MSE: 1.5232771809895833
-4: Total MSE: 1.530751953125
-5: Total MSE: 1.5079876302083333
-6: Total MSE: 1.498435546875
-7: Total MSE: 1.5007643229166667
-8: Total MSE: 1.4801907552083333
-9: Total MSE: 1.4675882161458333
+Init: 6.656000018119811e-05
+Init sparse: 0.00017414399981498718
+Neuron update: 5.312870414372948
+Presynaptic update: 5.5247956496872686
+Synapse dynamics: 5.770576800560203
+0: Total MSE: 2.788080078125
+1: Total MSE: 1.68285986328125
+2: Total MSE: 1.2684957682291667
+3: Total MSE: 0.5165113118489584
+4: Total MSE: 0.5104345296223959
+5: Total MSE: 0.31422788492838544
+6: Total MSE: 0.343723388671875
+7: Total MSE: 0.4409007161458333
+8: Total MSE: 0.82462109375
+9: Total MSE: 0.4007119140625
 swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
