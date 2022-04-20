@@ -28,11 +28,38 @@ adam_optimizer_model = genn_model.create_custom_custom_update_class(
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
+    
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
+    
     // Add gradient to variable, scaled by learning rate
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
     """)
+
+adam_optimizer_track_dormant_model = genn_model.create_custom_custom_update_class(
+    "adam_optimizer_track_dormant",
+    param_names=["beta1", "beta2", "epsilon"],
+    var_name_types=[("m", "scalar"), ("v", "scalar")],
+    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
+                         ("secondMomentScale", "scalar"), ("dormant", "uint32_t*")],
+    var_refs=[("gradient", "scalar", VarAccessMode_READ_ONLY), ("variable", "scalar")],
+    update_code="""
+    // Update biased first moment estimate
+    $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
+    
+    // Update biased second moment estimate
+    $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
+    
+    // Add gradient to variable, scaled by learning rate
+    const bool variableNonZero = ($(variable) != 0.0);
+    $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
+    
+    // If variable started out non-zero but has now gone negative, mark as dormant
+    if(variableNonZero && $(variable) < 0.0) {
+        atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
+    }
+    """)
+
 
 adam_optimizer_zero_gradient_model = genn_model.create_custom_custom_update_class(
     "adam_optimizer_zero_gradient",
@@ -44,10 +71,13 @@ adam_optimizer_zero_gradient_model = genn_model.create_custom_custom_update_clas
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
+    
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
+    
     // Add gradient to variable, scaled by learning rate
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
+    
     // Zero gradient
     $(gradient) = 0.0;
     """)
@@ -86,6 +116,7 @@ gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_cl
     update_code="""
     // Descend!
     $(variable) -= $(eta) * $(gradient);
+    
     // Zero gradient
     $(gradient) = 0.0;
     """)
@@ -294,6 +325,63 @@ eprop_alif_model = genn_model.create_custom_weight_update_class(
     $(DeltaG) += (eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e);
     $(eFiltered) = eFiltered;
     """)
+    
+eprop_alif_deep_r_model = genn_model.create_custom_weight_update_class(
+    "eprop_alif_deep_r",
+    param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "CL1", "NumExcitatory"],
+    derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
+                    ("Rho", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[1]))()),
+                    ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[3] * dt) / 1000.0)()),
+                    ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[4]))())],
+    var_name_types=[("g", "scalar", VarAccess_READ_ONLY), ("eFiltered", "scalar"), ("epsilonA", "scalar"), ("DeltaG", "scalar")],
+    pre_var_name_types=[("ZFilter", "scalar")],
+    post_var_name_types=[("Psi", "scalar"), ("FAvg", "scalar")],
+    
+    sim_code="""
+    const float sign = ($(id_pre) < (int)$(NumExcitatory)) ? 1.0 : -1.0;
+    $(addToInSyn, sign * $(g));
+    """,
+
+    pre_spike_code="""
+    $(ZFilter) += 1.0;
+    """,
+    pre_dynamics_code="""
+    $(ZFilter) *= $(Alpha);
+    """,
+
+    post_spike_code="""
+    $(FAvg) += (1.0 - $(AlphaFAv));
+    """,
+    post_dynamics_code="""
+    $(FAvg) *= $(AlphaFAv);
+    if ($(RefracTime_post) > 0.0) {
+      $(Psi) = 0.0;
+    }
+    else {
+      $(Psi) = (1.0 / $(Vthresh_post)) * 0.3 * fmax(0.0, 1.0 - fabs(($(V_post) - ($(Vthresh_post) + ($(Beta_post) * $(A_post)))) / $(Vthresh_post)));
+    }
+    """,
+
+    synapse_dynamics_code="""
+    const float sign = ($(id_pre) < (int)$(NumExcitatory)) ? 1.0 : -1.0;
+    
+    // Calculate some common factors in e and epsilon update
+    scalar epsilonA = $(epsilonA);
+    const scalar psiZFilter = $(Psi) * $(ZFilter);
+    const scalar psiBetaEpsilonA = $(Psi) * $(Beta) * epsilonA;
+    
+    // Calculate e and episilonA
+    const scalar e = psiZFilter  - psiBetaEpsilonA;
+    $(epsilonA) = psiZFilter + (($(Rho) * epsilonA) - psiBetaEpsilonA);
+    
+    // Calculate filtered version of eligibility trace
+    scalar eFiltered = $(eFiltered);
+    eFiltered = (eFiltered * $(Alpha)) + e;
+    
+    // Apply weight update
+    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e)) + $(CL1);
+    $(eFiltered) = eFiltered;
+    """)
 
 eprop_lif_model = genn_model.create_custom_weight_update_class(
     "eprop_lif",
@@ -339,7 +427,7 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
 
 eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     "eprop_lif_deep_r",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "CL1"],
+    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "CL1", "NumExcitatory"],
     derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
                     ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
                     ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
@@ -348,7 +436,7 @@ eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     post_var_name_types=[("Psi", "scalar"), ("FAvg", "scalar")],
     
     sim_code="""
-    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
+    const float sign = ($(id_pre) < (int)$(NumExcitatory)) ? 1.0 : -1.0;
     $(addToInSyn, sign * $(g));
     """,
 
