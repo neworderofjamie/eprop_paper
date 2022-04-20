@@ -480,19 +480,6 @@ if args.reset_neurons:
     recurrent_lif_v_view = recurrent_lif.vars["V"].view
     output_y_view = output.vars["Y"].view
 
-if args.num_recurrent_alif > 0:
-    input_recurrent_alif_g_view = input_recurrent_alif.vars["g"].view
-    recurrent_alif_output_g_view = recurrent_alif_output.vars["g"].view
-if args.num_recurrent_lif > 0:
-    input_recurrent_lif_g_view = input_recurrent_lif.vars["g"].view
-    recurrent_lif_output_g_view = recurrent_lif_output.vars["g"].view
-
-if not args.feedforward:
-    if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif_g_view = recurrent_alif_recurrent_alif.vars["g"].view
-    if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_lif_g_view = recurrent_lif_recurrent_lif.vars["g"].view
-
 # Open file
 if first_rank:
     if args.resume_epoch is None:
@@ -615,8 +602,8 @@ for epoch in range(epoch_start, args.num_epochs):
             input_recurrent_alif.pull_var_from_device("g")
             recurrent_alif_output.pull_var_from_device("g")
 
-            np.save(os.path.join(output_directory, "g_input_recurrent_%u.npy" % epoch), input_recurrent_alif_g_view)
-            np.save(os.path.join(output_directory, "g_recurrent_output_%u.npy" % epoch), recurrent_alif_output_g_view)
+            np.save(os.path.join(output_directory, "g_input_recurrent_%u.npy" % epoch), input_recurrent_alif.get_var_values("g"))
+            np.save(os.path.join(output_directory, "g_recurrent_output_%u.npy" % epoch), recurrent_alif_output.get_var_values("g"))
             
             if input_recurrent_sparse:
                 input_recurrent_alif.pull_connectivity_from_device()
@@ -626,8 +613,8 @@ for epoch in range(epoch_start, args.num_epochs):
             input_recurrent_lif.pull_var_from_device("g")
             recurrent_lif_output.pull_var_from_device("g")
 
-            np.save(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % epoch), input_recurrent_lif_g_view)
-            np.save(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % epoch), recurrent_lif_output_g_view)
+            np.save(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % epoch), input_recurrent_lif.get_var_values("g"))
+            np.save(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % epoch), recurrent_lif_output.get_var_values("g"))
             
             if input_recurrent_sparse:
                 input_recurrent_lif.pull_connectivity_from_device()
@@ -637,7 +624,7 @@ for epoch in range(epoch_start, args.num_epochs):
         if not args.feedforward:
             if args.num_recurrent_alif > 0:
                 recurrent_alif_recurrent_alif.pull_var_from_device("g")
-                np.save(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % epoch), recurrent_alif_recurrent_alif_g_view)
+                np.save(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % epoch), recurrent_alif_recurrent_alif.get_var_values("g"))
                 
                 if recurrent_recurrent_sparse:
                     recurrent_alif_recurrent_alif.pull_connectivity_from_device()
@@ -646,7 +633,7 @@ for epoch in range(epoch_start, args.num_epochs):
     
             if args.num_recurrent_lif > 0:
                 recurrent_lif_recurrent_lif.pull_var_from_device("g")
-                np.save(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % epoch), recurrent_lif_recurrent_lif_g_view)
+                np.save(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % epoch), recurrent_lif_recurrent_lif.get_var_values("g"))
                 
                 if recurrent_recurrent_sparse:
                     recurrent_lif_recurrent_lif.pull_connectivity_from_device()
