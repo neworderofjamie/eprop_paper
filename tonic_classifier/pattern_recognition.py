@@ -246,8 +246,7 @@ if input_recurrent_deep_r:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                             {}, {}, input_recurrent_optimiser_var_refs)
 
-    input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, 
-                                   NUM_INPUT, NUM_RECURRENT, WEIGHT_0)
+    input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, NUM_INPUT, NUM_RECURRENT)
 else:
     if args.adam:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
@@ -265,8 +264,7 @@ if recurrent_recurrent_deep_r:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                                 {}, {}, recurrent_recurrent_optimiser_var_refs)
     
-    recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, 
-                                       NUM_RECURRENT, NUM_RECURRENT, WEIGHT_0)
+    recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, NUM_RECURRENT, NUM_RECURRENT)
 else:
     if args.adam:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
