@@ -161,6 +161,10 @@ print("Data processing time:%f ms" % ((end_process_time - start_processing_time)
 # **NOTE** not really necessary for evaluation - could slice up weights
 num_output_neurons = int(2**(np.ceil(np.log2(num_outputs))))
 
+# Flags for simplifying logic
+input_recurrent_sparse = (args.input_recurrent_sparsity != 1.0)
+recurrent_recurrent_sparse = (args.recurrent_recurrent_sparsity != 1.0)
+
 # ----------------------------------------------------------------------------
 # Neuron initialisation
 # ----------------------------------------------------------------------------
@@ -183,6 +187,9 @@ assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)
 if args.num_recurrent_alif > 0:
     # Input->recurrent synapse parameters
     input_recurrent_alif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.trained_epoch))}
+    
+    if input_recurrent_sparse:
+        input_recurrent_alif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_%u.npy" % args.trained_epoch))
 
     # Recurrent->output synapse parameters
     recurrent_alif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_output_%u.npy" % args.trained_epoch))}
@@ -191,6 +198,9 @@ if args.num_recurrent_lif > 0:
     # Input->recurrent synapse parameters
     input_recurrent_lif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.trained_epoch))}
 
+    if input_recurrent_sparse:
+        input_recurrent_lif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_lif_%u.npy" % args.trained_epoch))
+    
     # Recurrent->output synapse parameters
     recurrent_lif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % args.trained_epoch))}
 
@@ -198,8 +208,14 @@ if args.num_recurrent_lif > 0:
 if not args.feedforward:
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.trained_epoch))}
+        
+        if recurrent_recurrent_sparse:
+            recurrent_alif_recurrent_alif_inds = np.load(os.path.join(output_directory, "ind_recurrent_recurrent_%u.npy" % args.trained_epoch))
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.trained_epoch))}
+        
+        if recurrent_recurrent_sparse:
+            recurrent_lif_recurrent_lif_inds = np.load(os.path.join(output_directory, "ind_recurrent_lif_recurrent_lif_%u.npy" % args.trained_epoch))
 
 # ----------------------------------------------------------------------------
 # Model description
@@ -242,9 +258,11 @@ input.set_extra_global_param("spikeTimes", np.zeros(args.batch_size * data_loade
 input.spike_recording_enabled = args.record
 
 # Add synapse populations
+input_recurrent_matrix_type = ("SPARSE_INDIVIDUALG" if input_recurrent_sparse
+                               else "DENSE_INDIVIDUALG")
 if args.num_recurrent_alif > 0:
     input_recurrent_alif = model.add_synapse_population(
-        "InputRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
+        "InputRecurrentALIF", input_recurrent_matrix_type, NO_DELAY,
         input, recurrent_alif,
         "StaticPulse", {}, input_recurrent_alif_vars, {}, {},
         "DeltaCurr", {}, {})
@@ -253,9 +271,13 @@ if args.num_recurrent_alif > 0:
         recurrent_alif, output,
         "StaticPulse", {}, recurrent_alif_output_vars, {}, {},
         "DeltaCurr", {}, {})
+    
+    if input_recurrent_sparse:
+        input_recurrent_alif.set_sparse_connections(input_recurrent_alif_inds[0],
+                                                    input_recurrent_alif_inds[1])
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
-        "InputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+        "InputRecurrentLIF", input_recurrent_matrix_type, NO_DELAY,
         input, recurrent_lif,
         "StaticPulse", {}, input_recurrent_lif_vars, {}, {},
         "DeltaCurr", {}, {})
@@ -264,20 +286,35 @@ if args.num_recurrent_lif > 0:
         recurrent_lif, output,
         "StaticPulse", {}, recurrent_lif_output_vars, {}, {},
         "DeltaCurr", {}, {})
+    
+    if input_recurrent_sparse:
+        input_recurrent_lif.set_sparse_connections(input_recurrent_lif_inds[0],
+                                                   input_recurrent_lif_inds[1])
 
 if not args.feedforward:
+    recurrent_recurrent_matrix_type = ("SPARSE_INDIVIDUALG" if recurrent_recurrent_sparse
+                                       else "DENSE_INDIVIDUALG")
+
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif = model.add_synapse_population(
-            "RecurrentALIFRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
+            "RecurrentALIFRecurrentALIF", recurrent_recurrent_matrix_type, NO_DELAY,
             recurrent_alif, recurrent_alif,
             "StaticPulse", {}, recurrent_alif_recurrent_alif_vars, {}, {},
             "DeltaCurr", {}, {})
+        
+        if recurrent_recurrent_sparse:
+            recurrent_alif_recurrent_alif.set_sparse_connections(recurrent_alif_recurrent_alif_inds[0],
+                                                                 recurrent_alif_recurrent_alif_inds[1])
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
-            "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+            "RecurrentLIFRecurrentLIF", recurrent_recurrent_matrix_type, NO_DELAY,
             recurrent_lif, recurrent_lif,
             "StaticPulse", {}, recurrent_lif_recurrent_lif_vars, {}, {},
             "DeltaCurr", {}, {})
+        
+        if recurrent_recurrent_sparse:
+            recurrent_lif_recurrent_lif.set_sparse_connections(recurrent_lif_recurrent_lif_inds[0],
+                                                               recurrent_lif_recurrent_lif_inds[1])
 
 # Build and load model
 stimuli_timesteps = int(np.ceil(data_loader.max_stimuli_time / args.dt))
