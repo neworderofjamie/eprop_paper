@@ -16,6 +16,8 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--log-latency-threshold", type=int, default=51)
     parser.add_argument("--log-latency-tau", type=float, default=20.0)
     parser.add_argument("--regularizer-strength", type=float, default=0.001)
+    parser.add_argument("--input-recurrent-sparsity", type=float, default=1.0)
+    parser.add_argument("--recurrent-recurrent-sparsity", type=float, default=1.0)
     parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
     parser.add_argument("--suffix", default="")
     parser.add_argument("--seed", type=int, default=1234)

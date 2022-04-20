@@ -27,6 +27,7 @@ WEIGHT_0 = 1.0
 parser = ArgumentParser(add_help=False)
 parser.add_argument("--timing", action="store_true")
 parser.add_argument("--record", action="store_true")
+parser.add_argument("--deep-r", action="store_true")
 parser.add_argument("--batch-size", type=int, default=512)
 parser.add_argument("--num-epochs", type=int, default=50)
 parser.add_argument("--resume-epoch", type=int, default=None)
@@ -57,8 +58,6 @@ def update_adam(learning_rate, adam_step, optimiser_custom_updates):
         o.extra_global_params["alpha"].view[:] = learning_rate
         o.extra_global_params["firstMomentScale"].view[:] = first_moment_scale
         o.extra_global_params["secondMomentScale"].view[:] = second_moment_scale
-
-
 
 # If we're using NCCL
 dataset_slice_end = None if args.hold_back_validate is None else -args.hold_back_validate
@@ -140,6 +139,12 @@ num_output_neurons = int(2**(np.ceil(np.log2(num_outputs))))
 output_neuron_models = {16: eprop.output_classification_model_16,
                         32: eprop.output_classification_model_32}
 
+# Flags for simplifying logic
+input_recurrent_sparse = (args.input_recurrent_sparsity != 1.0)
+recurrent_recurrent_sparse = (args.recurrent_recurrent_sparsity != 1.0)
+input_recurrent_deep_r = args.deep_r and sparse_input_recurrent 
+recurrent_recurrent_deep_r = args.deep_r and sparse_recurrent_recurrent 
+
 # ----------------------------------------------------------------------------
 # Neuron initialisation
 # ----------------------------------------------------------------------------
@@ -172,13 +177,17 @@ eprop_post_vars = {"Psi": 0.0, "FAvg": 0.0}
 if args.num_recurrent_alif > 0:
     input_recurrent_alif_vars = {"eFiltered": 0.0, "epsilonA": 0.0, "DeltaG": 0.0}
     if args.resume_epoch is None:
-        input_recurrent_alif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(num_input_neurons)})
+        input_recurrent_alif_vars["g"] = genn_model.init_var(
+            eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal", 
+            {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(num_input_neurons)})
     else:
         input_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.resume_epoch))
 if args.num_recurrent_lif > 0:
     input_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
     if args.resume_epoch is None:
-        input_recurrent_lif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(num_input_neurons)})
+        input_recurrent_lif_vars["g"] = genn_model.init_var(
+            eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal", 
+            {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(num_input_neurons)})
     else:
         input_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.resume_epoch))
 
@@ -187,13 +196,17 @@ if not args.feedforward:
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif_vars = {"eFiltered": 0.0, "epsilonA": 0.0, "DeltaG": 0.0}
         if args.resume_epoch is None:
-            recurrent_alif_recurrent_alif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_alif)})
+            recurrent_alif_recurrent_alif_vars["g"] = genn_model.init_var(
+                eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal",
+                {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_alif)})
         else:
             recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
         if args.resume_epoch is None:
-            recurrent_lif_recurrent_lif_vars["g"] = genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
+            recurrent_lif_recurrent_lif_vars["g"] = genn_model.init_var(
+                eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal",
+                {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
         else:
             recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
 
@@ -268,13 +281,23 @@ input.spike_recording_enabled = args.record
 # (For now) check that there aren't both LIF and ALIF recurrent neurons
 assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)
 
+# Configure input->recurrent connectivity
+if input_recurrent_sparse:
+    input_recurrent_sparse_init = genn_model.init_connectivity(
+        "FixedProbability", {"prob": args.input_recurrent_sparsity})
+    input_recurrent_matrix_type = "SPARSE_INDIVIDUALG"
+else:
+    input_recurrent_sparse_init = None
+    input_recurrent_matrix_type = "DENSE_INDIVIDUALG"
+
 # Add synapse populations
 if args.num_recurrent_alif > 0:
     input_recurrent_alif = model.add_synapse_population(
-        "InputRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
+        "InputRecurrentALIF", input_recurrent_matrix_type, NO_DELAY,
         input, recurrent_alif,
         eprop.eprop_alif_model, eprop_alif_params, input_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
-        "DeltaCurr", {}, {})
+        "DeltaCurr", {}, {},
+        input_recurrent_sparse_init)
     recurrent_alif_output = model.add_synapse_population(
         "RecurrentALIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
         recurrent_alif, output,
@@ -289,10 +312,11 @@ if args.num_recurrent_alif > 0:
 
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
-        "InputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+        "InputRecurrentLIF", input_recurrent_matrix_type, NO_DELAY,
         input, recurrent_lif,
         eprop.eprop_lif_model, eprop_lif_params, input_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
-        "DeltaCurr", {}, {})
+        "DeltaCurr", {}, {},
+        input_recurrent_sparse_init)
     recurrent_lif_output = model.add_synapse_population(
         "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
         recurrent_lif, output,
@@ -306,18 +330,29 @@ if args.num_recurrent_lif > 0:
     output_recurrent_lif.ps_target_var = "ISynFeedback"
 
 if not args.feedforward:
+    # Configure recurrent->recurrent connectivity
+    if recurrent_recurrent_sparse:
+        recurrent_recurrent_sparse_init = genn_model.init_connectivity(
+            "FixedProbability", {"prob": args.recurrent_recurrent_sparsity})
+        recurrent_recurrent_matrix_type = "SPARSE_INDIVIDUALG"
+    else:
+        recurrent_recurrent_sparse_init = None
+        recurrent_recurrent_matrix_type = "DENSE_INDIVIDUALG"
+
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif = model.add_synapse_population(
-            "RecurrentALIFRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
+            "RecurrentALIFRecurrentALIF", recurrent_recurrent_matrix_type, NO_DELAY,
             recurrent_alif, recurrent_alif,
             eprop.eprop_alif_model, eprop_alif_params, recurrent_alif_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
-            "DeltaCurr", {}, {})
+            "DeltaCurr", {}, {},
+            recurrent_recurrent_sparse_init)
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
-            "RecurrentLIFRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
+            "RecurrentLIFRecurrentLIF", recurrent_recurrent_matrix_type, NO_DELAY,
             recurrent_lif, recurrent_lif,
             eprop.eprop_lif_model, eprop_lif_params, recurrent_lif_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
-            "DeltaCurr", {}, {})
+            "DeltaCurr", {}, {},
+            recurrent_recurrent_sparse_init)
 
 # Add custom update for calculating initial tranpose weights
 if args.num_recurrent_alif > 0:
