@@ -2,7 +2,6 @@ import csv
 import numpy as np
 import os
 import tonic
-import matplotlib.pyplot as plt
 
 from argparse import ArgumentParser
 from time import perf_counter
@@ -618,20 +617,41 @@ for epoch in range(epoch_start, args.num_epochs):
 
             np.save(os.path.join(output_directory, "g_input_recurrent_%u.npy" % epoch), input_recurrent_alif_g_view)
             np.save(os.path.join(output_directory, "g_recurrent_output_%u.npy" % epoch), recurrent_alif_output_g_view)
+            
+            if input_recurrent_sparse:
+                input_recurrent_alif.pull_connectivity_from_device()
+                np.save(os.path.join(output_directory, "ind_input_recurrent_%u.npy" % epoch), 
+                        np.vstack((input_recurrent_alif.get_sparse_pre_inds(), input_recurrent_alif.get_sparse_post_inds())))
         if args.num_recurrent_lif > 0:
             input_recurrent_lif.pull_var_from_device("g")
             recurrent_lif_output.pull_var_from_device("g")
 
             np.save(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % epoch), input_recurrent_lif_g_view)
             np.save(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % epoch), recurrent_lif_output_g_view)
+            
+            if input_recurrent_sparse:
+                input_recurrent_lif.pull_connectivity_from_device()
+                np.save(os.path.join(output_directory, "ind_input_recurrent_lif_%u.npy" % epoch), 
+                        np.vstack((input_recurrent_lif.get_sparse_pre_inds(), input_recurrent_lif.get_sparse_post_inds())))
 
         if not args.feedforward:
             if args.num_recurrent_alif > 0:
                 recurrent_alif_recurrent_alif.pull_var_from_device("g")
                 np.save(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % epoch), recurrent_alif_recurrent_alif_g_view)
+                
+                if recurrent_recurrent_sparse:
+                    recurrent_alif_recurrent_alif.pull_connectivity_from_device()
+                    np.save(os.path.join(output_directory, "ind_recurrent_recurrent_%u.npy" % epoch), 
+                            np.vstack((recurrent_alif_recurrent_alif.get_sparse_pre_inds(), recurrent_alif_recurrent_alif.get_sparse_post_inds())))
+    
             if args.num_recurrent_lif > 0:
                 recurrent_lif_recurrent_lif.pull_var_from_device("g")
                 np.save(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % epoch), recurrent_lif_recurrent_lif_g_view)
+                
+                if recurrent_recurrent_sparse:
+                    recurrent_lif_recurrent_lif.pull_connectivity_from_device()
+                    np.save(os.path.join(output_directory, "ind_recurrent_lif_recurrent_lif_%u.npy" % epoch), 
+                            np.vstack((recurrent_lif_recurrent_lif.get_sparse_pre_inds(), recurrent_lif_recurrent_lif.get_sparse_post_inds())))
 
         output.pull_var_from_device("B")
         np.save(os.path.join(output_directory, "b_output_%u.npy" % epoch), output_b_view)
