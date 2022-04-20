@@ -1,0 +1,22 @@
+make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+make: Leaving directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+Trial 200
+swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
+make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+Trial 200
+swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
+make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
+make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+Trial 200
+swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
+make: Entering directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/its/home/jk421/Documents/papers/eprop_paper/tonic_classifier/pattern_recognition_CODE'
+swig/python detected a memory leak of type 'CodeGenerator::CUDA::Backend *', no destructor found.
