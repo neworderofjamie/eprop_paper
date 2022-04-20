@@ -3,12 +3,11 @@ import numpy as np
 DEBUG = False
 
 class DeepR:
-    def __init__(self, sg, optimiser, num_pre, num_post, weight_0):
+    def __init__(self, sg, optimiser, num_pre, num_post):
         self.sg = sg
         self.optimiser = optimiser
         self.num_pre = num_pre
         self.num_post = num_post
-        self.weight_sd = weight_0 / np.sqrt(self.num_pre)
         
         # Zero all bitmask EGPs
         num_words = int(np.ceil((num_pre * sg.max_row_length) / 32))
@@ -115,13 +114,21 @@ class DeepR:
            
                 # Remove inactive synapse group state vars
                 for v in self.sg_var_views.values():
-                    v_row = v[start_id:end_id]
-                    v[start_id:start_id + slice_length] = v_row[keep_mask]
+                    if len(v.shape) == 2:
+                        v_row = v[:,start_id:end_id]
+                        v[:,start_id:start_id + slice_length] = v_row[:,keep_mask]
+                    else:
+                        v_row = v[start_id:end_id]
+                        v[start_id:start_id + slice_length] = v_row[keep_mask]
                 
                 # Remove inactive optimiser state vars
                 for v in self.optimiser_var_views.values():
-                    v_row = v[start_id:end_id]
-                    v[start_id:start_id + slice_length] = v_row[keep_mask]
+                    if len(v.shape) == 2:
+                        v_row = v[:,start_id:end_id]
+                        v[:,start_id:start_id + slice_length] = v_row[:,keep_mask]
+                    else:
+                        v_row = v[start_id:end_id]
+                        v[start_id:start_id + slice_length] = v_row[keep_mask]
                     
                 # Reduce row length
                 self.sg._row_lengths[i] -= num_dormant
@@ -177,11 +184,17 @@ class DeepR:
 
                 # Initialise synapse group state variables
                 for n, v in self.sg_var_views.items():
-                     v[new_syn_start_ind:new_syn_end_ind] = 0
+                    if len(v.shape) == 2:
+                        v[:,new_syn_start_ind:new_syn_end_ind] = 0
+                    else:
+                        v[new_syn_start_ind:new_syn_end_ind] = 0
                 
                 # Initialise optimiser state variables
                 for v in self.optimiser_var_views.values():
-                    v[new_syn_start_ind:new_syn_end_ind] = 0
+                    if len(v.shape) == 2:
+                        v[:,new_syn_start_ind:new_syn_end_ind] = 0
+                    else:
+                        v[new_syn_start_ind:new_syn_end_ind] = 0
             
                 # Update row length
                 self.sg._row_lengths[i] += num_activations[i]
