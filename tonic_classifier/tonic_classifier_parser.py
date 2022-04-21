@@ -8,6 +8,7 @@ def parse_arguments(parent_parser=None, description=None):
         parser = ArgumentParser(description=description, parents=[parent_parser])
     parser.add_argument("--dt", type=float, default=1.0)
     parser.add_argument("--feedforward", action="store_true")
+    parser.add_argument("--deep-r", action="store_true")
     parser.add_argument("--num-recurrent-alif", type=int, default=256)
     parser.add_argument("--num-recurrent-lif", type=int, default=0)
     parser.add_argument("--learning-rate", type=float, default=0.001)

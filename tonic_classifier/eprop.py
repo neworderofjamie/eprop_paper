@@ -28,10 +28,10 @@ adam_optimizer_model = genn_model.create_custom_custom_update_class(
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
-    
+
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
-    
+
     // Add gradient to variable, scaled by learning rate
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
     """)
@@ -46,16 +46,15 @@ adam_optimizer_track_dormant_model = genn_model.create_custom_custom_update_clas
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
-    
+
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
-    
+
     // Add gradient to variable, scaled by learning rate
-    const bool variableNonZero = ($(variable) != 0.0);
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
-    
-    // If variable started out non-zero but has now gone negative, mark as dormant
-    if(variableNonZero && $(variable) < 0.0) {
+
+    // If variable has now gone negative, mark as dormant
+    if($(variable) < 0.0) {
         atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
     }
     """)
@@ -71,13 +70,13 @@ adam_optimizer_zero_gradient_model = genn_model.create_custom_custom_update_clas
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
-    
+
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
-    
+
     // Add gradient to variable, scaled by learning rate
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
-    
+
     // Zero gradient
     $(gradient) = 0.0;
     """)
@@ -92,19 +91,18 @@ adam_optimizer_zero_gradient_track_dormant_model = genn_model.create_custom_cust
     update_code="""
     // Update biased first moment estimate
     $(m) = ($(beta1) * $(m)) + ((1.0 - $(beta1)) * $(gradient));
-    
+
     // Update biased second moment estimate
     $(v) = ($(beta2) * $(v)) + ((1.0 - $(beta2)) * $(gradient) * $(gradient));
-    
+
     // Add gradient to variable, scaled by learning rate
-    const bool variableNonZero = ($(variable) != 0.0);
     $(variable) -= ($(alpha) * $(m) * $(firstMomentScale)) / (sqrt($(v) * $(secondMomentScale)) + $(epsilon));
-    
+
     // Zero gradient
     $(gradient) = 0.0;
-    
-    // If variable started out non-zero but has now gone negative, mark as dormant
-    if(variableNonZero && $(variable) < 0.0) {
+
+    // If variable started has gone negative, mark as dormant
+    if($(variable) < 0.0) {
         atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
     }
     """)
@@ -116,7 +114,7 @@ gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_cl
     update_code="""
     // Descend!
     $(variable) -= $(eta) * $(gradient);
-    
+
     // Zero gradient
     $(gradient) = 0.0;
     """)
@@ -126,16 +124,14 @@ gradient_descent_zero_gradient_track_dormant_model = genn_model.create_custom_cu
     extra_global_params=[("eta", "scalar"), ("dormant", "uint32_t*")],
     var_refs=[("gradient", "scalar"), ("variable", "scalar")],
     update_code="""
-    const bool variableNonZero = ($(variable) != 0.0);
-
     // Descend!
     $(variable) -= $(eta) * $(gradient);
-    
+
     // Zero gradient
     $(gradient) = 0.0;
-    
-    // If variable started out non-zero but has now gone negative, mark as dormant
-    if(variableNonZero && $(variable) < 0.0) {
+
+    // If variable has gone negative, mark as dormant
+    if($(variable) < 0.0) {
         atomicOr(&$(dormant)[$(id_syn) / 32], 1 << ($(id_syn) % 32));
     }
     """)

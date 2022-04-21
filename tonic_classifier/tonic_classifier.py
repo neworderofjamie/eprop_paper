@@ -25,7 +25,6 @@ WEIGHT_0 = 1.0
 parser = ArgumentParser(add_help=False)
 parser.add_argument("--timing", action="store_true")
 parser.add_argument("--record", action="store_true")
-parser.add_argument("--deep-r", action="store_true")
 parser.add_argument("--batch-size", type=int, default=512)
 parser.add_argument("--num-epochs", type=int, default=50)
 parser.add_argument("--resume-epoch", type=int, default=None)
@@ -183,11 +182,11 @@ if args.num_recurrent_alif > 0:
     else:
         assert not input_recurrent_sparse
         input_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.resume_epoch))
-        
+
     if input_recurrent_deep_r:
         input_recurrent_alif_params["CL1"] = args.l1_regularizer_strength
         input_recurrent_alif_params["NumExcitatory"] = float(num_input_neurons)
-    
+
 if args.num_recurrent_lif > 0:
     input_recurrent_lif_params = deepcopy(eprop_lif_params)
     input_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
@@ -198,7 +197,7 @@ if args.num_recurrent_lif > 0:
     else:
         assert not input_recurrent_sparse
         input_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.resume_epoch))
-    
+
     if input_recurrent_deep_r:
         input_recurrent_lif_params["CL1"] = args.l1_regularizer_strength
         input_recurrent_lif_params["NumExcitatory"] = float(num_input_neurons)
@@ -215,7 +214,7 @@ if not args.feedforward:
         else:
             assert not recurrent_recurrent_sparse
             recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
-        
+
         if recurrent_recurrent_deep_r:
             recurrent_alif_recurrent_alif_params["CL1"] = args.l1_regularizer_strength
             recurrent_alif_recurrent_alif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_alif)
@@ -230,7 +229,7 @@ if not args.feedforward:
         else:
             assert not recurrent_recurrent_sparse
             recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
-        
+
         if recurrent_recurrent_deep_r:
             recurrent_lif_recurrent_lif_params["CL1"] = args.l1_regularizer_strength
             recurrent_lif_recurrent_lif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_lif)
@@ -613,19 +612,19 @@ for epoch in range(epoch_start, args.num_epochs):
         # Update Adam optimiser scaling factors
         update_adam(learning_rate, adam_step, optimisers)
         adam_step += 1
-        
+
         # Reset Deep-R optimisers
         for d in deep_r:
             d.reset()
-        
+
         # Now batch is complete, reduce and then apply gradients
         model.custom_update("GradientBatchReduce")
         model.custom_update("GradientLearn")
-        
+
         # Update Deep-R optimisers
         for d in deep_r:
             d.update()
-            
+
         if args.reset_neurons:
             recurrent_lif_v_view[:] = 0.0
             output_y_view[:] = 0.0
@@ -662,7 +661,7 @@ for epoch in range(epoch_start, args.num_epochs):
 
             np.save(os.path.join(output_directory, "g_input_recurrent_%u.npy" % epoch), input_recurrent_alif.get_var_values("g"))
             np.save(os.path.join(output_directory, "g_recurrent_output_%u.npy" % epoch), recurrent_alif_output.get_var_values("g"))
-            
+
             if input_recurrent_sparse:
                 input_recurrent_alif.pull_connectivity_from_device()
                 np.save(os.path.join(output_directory, "ind_input_recurrent_%u.npy" % epoch), 
@@ -673,7 +672,7 @@ for epoch in range(epoch_start, args.num_epochs):
 
             np.save(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % epoch), input_recurrent_lif.get_var_values("g"))
             np.save(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % epoch), recurrent_lif_output.get_var_values("g"))
-            
+
             if input_recurrent_sparse:
                 input_recurrent_lif.pull_connectivity_from_device()
                 np.save(os.path.join(output_directory, "ind_input_recurrent_lif_%u.npy" % epoch), 
@@ -683,16 +682,16 @@ for epoch in range(epoch_start, args.num_epochs):
             if args.num_recurrent_alif > 0:
                 recurrent_alif_recurrent_alif.pull_var_from_device("g")
                 np.save(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % epoch), recurrent_alif_recurrent_alif.get_var_values("g"))
-                
+
                 if recurrent_recurrent_sparse:
                     recurrent_alif_recurrent_alif.pull_connectivity_from_device()
                     np.save(os.path.join(output_directory, "ind_recurrent_recurrent_%u.npy" % epoch), 
                             np.vstack((recurrent_alif_recurrent_alif.get_sparse_pre_inds(), recurrent_alif_recurrent_alif.get_sparse_post_inds())))
-    
+
             if args.num_recurrent_lif > 0:
                 recurrent_lif_recurrent_lif.pull_var_from_device("g")
                 np.save(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % epoch), recurrent_lif_recurrent_lif.get_var_values("g"))
-                
+
                 if recurrent_recurrent_sparse:
                     recurrent_lif_recurrent_lif.pull_connectivity_from_device()
                     np.save(os.path.join(output_directory, "ind_recurrent_lif_recurrent_lif_%u.npy" % epoch), 
@@ -715,4 +714,3 @@ if first_rank:
         print("Gradient batch reduction custom update: %f" % model.get_custom_update_time("GradientBatchReduce"))
         print("Gradient learning custom update: %f" % model.get_custom_update_time("GradientLearn"))
         print("Gradient learning custom update transpose: %f" % model.get_custom_update_transpose_time("GradientLearn"))
-   

@@ -8,17 +8,17 @@ class DeepR:
         self.optimiser = optimiser
         self.num_pre = num_pre
         self.num_post = num_post
-        
+
         # Zero all bitmask EGPs
         num_words = int(np.ceil((num_pre * sg.max_row_length) / 32))
         optimiser.extra_global_params["dormant"].set_values(
             np.zeros(num_words, dtype=np.uint32))
 
-    
+
     def load(self):
         # Download newly-generated connectivity
         self.sg.pull_connectivity_from_device()
-    
+
         self.unpacked_conn = np.zeros((self.num_pre, self.num_post), dtype=np.uint8)
         self.unpacked_conn[self.sg.get_sparse_pre_inds(),
                            self.sg.get_sparse_post_inds()] = 1
@@ -29,18 +29,18 @@ class DeepR:
         # Get views to state variables
         self.sg_var_views = {n: v.view for n, v in self.sg.vars.items()}
         self.optimiser_var_views = {n: v.view for n, v in self.optimiser.vars.items()}
-    
+
     def plot_sparse(self, axis):
         axis.set_title("Sparse")
         connectivity = np.zeros((self.num_pre, self.num_post))
         connectivity[self.sg.get_sparse_pre_inds(), 
                      self.sg.get_sparse_post_inds()] = 1
         axis.imshow(connectivity)
-    
+
     def plot_unpacked(self, axis):
         axis.set_title("Unpacked")
         axis.imshow(self.unpacked_conn)
-        
+
     def plot_sparse_unpacked_comparison(self, axis):
         axis.set_title("Comparison")
         connectivity = np.zeros((self.num_pre, self.num_post))
@@ -48,12 +48,12 @@ class DeepR:
         connectivity[self.sg.get_sparse_pre_inds(), 
                      self.sg.get_sparse_post_inds()] -= 1
         axis.imshow(connectivity)
-    
+
     def reset(self):
         # Zero and upload dormancy flags
         self.dormant_view[:] = 0
         self.optimiser.push_extra_global_param_to_device("dormant")
-   
+
     def update(self):
         # Download dormancy flags
         self.optimiser.pull_extra_global_param_from_device("dormant")
@@ -62,11 +62,11 @@ class DeepR:
         dormant_unpack = np.unpackbits(
             self.dormant_view.view(dtype=np.uint8), 
             count=self.num_pre * self.sg.max_row_length, bitorder="little")
-        
+
         # Reshape
         dormant_unpack = np.reshape(dormant_unpack, 
                                     (self.num_pre, self.sg.max_row_length))
-        
+
         # Count dormant synapses
         total_dormant = np.sum(dormant_unpack)
 
@@ -80,7 +80,7 @@ class DeepR:
 
         if DEBUG:
             num_start_synapses = np.sum(self.sg._row_lengths)
-        
+
         # Loop through rows
         for i in range(self.num_pre):
             row_length = self.sg._row_lengths[i]
@@ -100,18 +100,18 @@ class DeepR:
             if num_dormant > 0:
                 # Check there is enough row left to make this many synapses dormant
                 assert row_length >= num_dormant
-                
+
                 # Get mask of row entries to keep
                 keep_mask = (dormant_unpack[i,:row_length] == 0)
                 slice_length = np.sum(keep_mask)
                 assert slice_length == (row_length - num_dormant)
-            
+
                 # Clear dormant synapses from unpacked representation
                 self.unpacked_conn[i, dormant_inds] = 0
-                
+
                 # Remove inactive indices
                 self.sg._ind[start_id:start_id + slice_length] = inds[keep_mask]
-           
+
                 # Remove inactive synapse group state vars
                 for v in self.sg_var_views.values():
                     if len(v.shape) == 2:
@@ -120,7 +120,7 @@ class DeepR:
                     else:
                         v_row = v[start_id:end_id]
                         v[start_id:start_id + slice_length] = v_row[keep_mask]
-                
+
                 # Remove inactive optimiser state vars
                 for v in self.optimiser_var_views.values():
                     if len(v.shape) == 2:
@@ -129,7 +129,7 @@ class DeepR:
                     else:
                         v_row = v[start_id:end_id]
                         v[start_id:start_id + slice_length] = v_row[keep_mask]
-                    
+
                 # Reduce row length
                 self.sg._row_lengths[i] -= num_dormant
 
@@ -150,7 +150,7 @@ class DeepR:
             num_row_padding_synapses = self.sg.max_row_length - self.sg._row_lengths[i]
             if num_row_padding_synapses > 0 and num_total_padding_synapses > 0:
                 probability = num_row_padding_synapses / num_total_padding_synapses
-                
+
                 # Sample number of activations
                 num_row_activations = min(num_row_padding_synapses, 
                                           np.random.binomial(total_dormant, probability))
@@ -170,15 +170,15 @@ class DeepR:
             if num_activations[i] > 0:
                 new_syn_start_ind = (self.sg.max_row_length * i) + self.sg._row_lengths[i]
                 new_syn_end_ind = new_syn_start_ind + num_activations[i]
-                
+
                 # Get possible inds to chose from
                 possible_inds = np.where(self.unpacked_conn[i] == 0)
-                
+
                 new_inds = np.random.choice(possible_inds[0], num_activations[i],
                                             replace=False)
                 # Sample indices
                 self.sg._ind[new_syn_start_ind:new_syn_end_ind] = new_inds
-                
+
                 # Update connectivity bitmask
                 self.unpacked_conn[i, new_inds] = 1
 
@@ -188,14 +188,14 @@ class DeepR:
                         v[:,new_syn_start_ind:new_syn_end_ind] = 0
                     else:
                         v[new_syn_start_ind:new_syn_end_ind] = 0
-                
+
                 # Initialise optimiser state variables
                 for v in self.optimiser_var_views.values():
                     if len(v.shape) == 2:
                         v[:,new_syn_start_ind:new_syn_end_ind] = 0
                     else:
                         v[new_syn_start_ind:new_syn_end_ind] = 0
-            
+
                 # Update row length
                 self.sg._row_lengths[i] += num_activations[i]
 

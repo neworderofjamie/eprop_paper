@@ -164,6 +164,8 @@ num_output_neurons = int(2**(np.ceil(np.log2(num_outputs))))
 # Flags for simplifying logic
 input_recurrent_sparse = (args.input_recurrent_sparsity != 1.0)
 recurrent_recurrent_sparse = (args.recurrent_recurrent_sparsity != 1.0)
+input_recurrent_deep_r = args.deep_r and input_recurrent_sparse
+recurrent_recurrent_deep_r = args.deep_r and recurrent_recurrent_sparse
 
 # ----------------------------------------------------------------------------
 # Neuron initialisation
@@ -187,9 +189,12 @@ assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)
 if args.num_recurrent_alif > 0:
     # Input->recurrent synapse parameters
     input_recurrent_alif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.trained_epoch))}
-    
+
     if input_recurrent_sparse:
         input_recurrent_alif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_%u.npy" % args.trained_epoch))
+
+    if input_recurrent_deep_r:
+        assert np.all(input_recurrent_alif_vars["g"] >= 0.0)
 
     # Recurrent->output synapse parameters
     recurrent_alif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_output_%u.npy" % args.trained_epoch))}
@@ -199,8 +204,12 @@ if args.num_recurrent_lif > 0:
     input_recurrent_lif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.trained_epoch))}
 
     if input_recurrent_sparse:
+        assert np.all(input_recurrent_alif_vars["g"] >= 0.0)
         input_recurrent_lif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_lif_%u.npy" % args.trained_epoch))
-    
+
+    if input_recurrent_deep_r:
+        assert np.all(input_recurrent_lif_vars["g"] >= 0.0)
+
     # Recurrent->output synapse parameters
     recurrent_lif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % args.trained_epoch))}
 
@@ -208,14 +217,27 @@ if args.num_recurrent_lif > 0:
 if not args.feedforward:
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.trained_epoch))}
-        
+
         if recurrent_recurrent_sparse:
             recurrent_alif_recurrent_alif_inds = np.load(os.path.join(output_directory, "ind_recurrent_recurrent_%u.npy" % args.trained_epoch))
+
+        if recurrent_recurrent_deep_r:
+            assert np.all(recurrent_alif_recurrent_alif_vars["g"] >= 0.0)
+            num_excitatory = round(0.8 * args.num_recurrent_alif)
+            inhibitory_mask = (recurrent_alif_recurrent_alif_inds[0] >= num_excitatory)
+            recurrent_alif_recurrent_alif_vars["g"][inhibitory_mask] *= -1.0
+
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.trained_epoch))}
-        
+
         if recurrent_recurrent_sparse:
             recurrent_lif_recurrent_lif_inds = np.load(os.path.join(output_directory, "ind_recurrent_lif_recurrent_lif_%u.npy" % args.trained_epoch))
+
+        if recurrent_recurrent_deep_r:
+            assert np.all(recurrent_lif_recurrent_lif_vars["g"] >= 0.0)
+            num_excitatory = round(0.8 * args.num_recurrent_lif)
+            inhibitory_mask = (recurrent_lif_recurrent_lif_inds[0] >= num_excitatory)
+            recurrent_alif_recurrent_lif_vars["g"][inhibitory_mask] *= -1.0
 
 # ----------------------------------------------------------------------------
 # Model description
