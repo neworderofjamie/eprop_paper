@@ -10,6 +10,7 @@ train_time_deep_r = [None, 4990, 4930, 4780]
 test_performance = [79.063604, 73.498233]
 test_performance_deep_r = [None, 73.100707]
 
+# Plot training time bars
 time_bar_width = 0.4
 time_tick_x = [0, 1, 2, 3]
 time_bar_x = [0, time_tick_x[1] - 0.22, time_tick_x[2] - 0.22, time_tick_x[3] - 0.22]
@@ -26,9 +27,15 @@ axes[0].set_xlabel("Connection density")
 axes[0].set_ylabel("Batch time [ms]")
 axes[0].set_title("A", loc="left")
 
+axes[0].set_xlabel("Connection density")
+axes[0].set_ylabel("Accuracy [%]")
+axes[1].set_title("B", loc="left")
+
 # Remove axis junk
 sns.despine(ax=axes[0])
+sns.despine(ax=axes[1])
 axes[0].xaxis.grid(False)
+axes[1].xaxis.grid(False)
 
 # Add figure legend
 fig.legend([time_actor, deep_r_time_actor], ["Fixed connectivity", "Deep-R rewiring"],
