@@ -92,11 +92,11 @@ class DeepR:
                 # Check that there are no synapses marked as dormant beyond end of row
                 assert np.sum(dormant_unpack[i, row_length:]) == 0
 
-            # Select inds in this row which will be made dormant
-            dormant_inds = inds[np.where(dormant_unpack[i,:row_length] == 1)]
+            # Select postsynaptic indices in this row which will be made dormant
+            dormant_j = inds[np.where(dormant_unpack[i,:row_length] == 1)]
 
             # If there are any
-            num_dormant = len(dormant_inds)
+            num_dormant = len(dormant_j)
             if num_dormant > 0:
                 # Check there is enough row left to make this many synapses dormant
                 assert row_length >= num_dormant
@@ -107,7 +107,7 @@ class DeepR:
                 assert slice_length == (row_length - num_dormant)
 
                 # Clear dormant synapses from unpacked representation
-                self.unpacked_conn[i, dormant_inds] = 0
+                self.unpacked_conn[i, dormant_j] = 0
 
                 # Remove inactive indices
                 self.sg._ind[start_id:start_id + slice_length] = inds[keep_mask]
