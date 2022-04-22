@@ -5,8 +5,8 @@ import plot_settings
 import seaborn as sns 
 
 density = np.asarray([1.0, 0.1, 0.05, 0.01])
-train_time = np.asarray([10185367.849693, 7965974.747984, 7803601.123173, 7661711.096380])
-train_time_deep_r = np.asarray([None, 8048950.119855, 7862808.712851, 7668845.872544])
+train_time = np.asarray([5072069.393037, 1266687.215274, 926892.090231, 580000.520527])
+train_time_deep_r = np.asarray([None, 1365169.228164, 1010249.199616, 603524.890482])
 test_performance = np.asarray([79.28, 77.61, 76.06, 72.08])
 test_performance_deep_r = np.asarray([None, 73.100707])
 
