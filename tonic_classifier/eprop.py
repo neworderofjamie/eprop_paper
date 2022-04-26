@@ -458,7 +458,7 @@ eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
 
     synapse_dynamics_code="""
     // **HACK** get sign
-    const float sign = ($(id_pre) < 200) ? 1.0 : -1.0;
+    const float sign = ($(id_pre) < $(NumExcitatory)) ? 1.0 : -1.0;
     
     const scalar e = $(ZFilter) * $(Psi);
     scalar eFiltered = $(eFiltered);
