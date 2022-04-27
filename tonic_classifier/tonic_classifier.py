@@ -33,7 +33,6 @@ parser.add_argument("--use-nccl", action="store_true")
 parser.add_argument("--hold-back-validate", type=int, default=None)
 parser.add_argument("--regularizer-tau", type=float, default=500.0)
 parser.add_argument("--regularizer-target-rate", type=float, default=10.0)
-parser.add_argument("--l1-regularizer-strength", type=float, default=0.00001)
 
 name_suffix, output_directory, args = parse_arguments(parser, description="Train eProp classifier")
 
@@ -334,6 +333,9 @@ if args.num_recurrent_alif > 0:
         eprop.feedback_model, {}, {"g": 0.0}, {}, {},
         "DeltaCurr", {}, {})
     output_recurrent_alif.ps_target_var = "ISynFeedback"
+    
+    if args.input_recurrent_max_row_length is not None:
+        input_recurrent_alif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
@@ -354,6 +356,9 @@ if args.num_recurrent_lif > 0:
         eprop.feedback_model, {}, {"g": 0.0}, {}, {},
         "DeltaCurr", {}, {})
     output_recurrent_lif.ps_target_var = "ISynFeedback"
+    
+    if args.input_recurrent_max_row_length is not None:
+        input_recurrent_lif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if not args.feedforward:
     # Configure recurrent->recurrent connectivity
@@ -373,6 +378,9 @@ if not args.feedforward:
             recurrent_alif_recurrent_alif_params, recurrent_alif_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
             "DeltaCurr", {}, {},
             recurrent_recurrent_sparse_init)
+
+        if args.recurrent_recurrent_max_row_length is not None:
+            recurrent_alif_recurrent_alif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
             "RecurrentLIFRecurrentLIF", recurrent_recurrent_matrix_type, NO_DELAY,
@@ -381,6 +389,9 @@ if not args.feedforward:
             recurrent_lif_recurrent_lif_params, recurrent_lif_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
             "DeltaCurr", {}, {},
             recurrent_recurrent_sparse_init)
+
+        if args.recurrent_recurrent_max_row_length is not None:
+            recurrent_lif_recurrent_lif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
 
 # Add custom update for calculating initial tranpose weights
 if args.num_recurrent_alif > 0:
