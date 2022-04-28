@@ -379,7 +379,6 @@ if not args.feedforward:
             recurrent_recurrent_sparse_init)
 
         if args.recurrent_recurrent_max_row_length is not None:
-            assert False
             recurrent_alif_recurrent_alif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
@@ -391,7 +390,6 @@ if not args.feedforward:
             recurrent_recurrent_sparse_init)
 
         if args.recurrent_recurrent_max_row_length is not None:
-            assert False
             recurrent_lif_recurrent_lif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
 
 # Add custom update for calculating initial tranpose weights
