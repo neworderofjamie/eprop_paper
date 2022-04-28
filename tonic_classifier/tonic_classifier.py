@@ -334,7 +334,6 @@ if args.num_recurrent_alif > 0:
     output_recurrent_alif.ps_target_var = "ISynFeedback"
     
     if args.input_recurrent_max_row_length is not None:
-        assert False
         input_recurrent_alif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if args.num_recurrent_lif > 0:
@@ -358,7 +357,6 @@ if args.num_recurrent_lif > 0:
     output_recurrent_lif.ps_target_var = "ISynFeedback"
     
     if args.input_recurrent_max_row_length is not None:
-        assert False
         input_recurrent_lif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if not args.feedforward:
