@@ -8,7 +8,7 @@ density = np.asarray([1.0, 0.1, 0.05, 0.01])
 train_time = np.asarray([5072069.393037, 1266687.215274, 926892.090231, 580000.520527])
 train_time_deep_r = np.asarray([None, 1365169.228164, 1010249.199616, 603524.890482])
 test_performance = np.asarray([74.690813, 73.674912, 70.538869, 62.279152])
-test_performance_deep_r = np.asarray([None, 70.980565, 71.378092, 61.793286])
+test_performance_deep_r = np.asarray([None, 72.924028, 69.169611, 62.279152])
 
 # Plot training time bars
 time_bar_width = 0.4
