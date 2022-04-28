@@ -32,6 +32,7 @@ def plot(output_directory, axis):
     
     if len(num_rewirings) > 0:
         rewiring_axis = axis.twinx()
+        rewiring_axis.set_ylim((0, 1000))
     
     max_train_performance = 100.0 * (num_correct[-1] / num_trials[-1])
 
