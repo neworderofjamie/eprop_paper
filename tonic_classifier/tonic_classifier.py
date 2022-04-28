@@ -406,20 +406,20 @@ if args.num_recurrent_lif > 0:
 
 # Add L1 optimisers to input->recurrent connectivity if deep-r is enabled on it
 # **NOTE** these could run after reduction BUT then strength would have to vary with batch size
-if input_recurrent_deep_r:
+if input_recurrent_deep_r and args.l1_regularizer_strength > 0.0:
     if args.num_recurrent_alif > 0:
         input_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(input_recurrent_alif, "DeltaG")}
         model.add_custom_update("input_recurrent_alif_l1", "L1", eprop.l1_model, 
                                 l1_params, {}, input_recurrent_alif_l1_var_refs)
 
-    if args.num_recurrent_lif > 0:
+    if args.num_recurrent_lif > 0 and args.l1_regularizer_strength > 0.0:
         input_recurrent_lif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(input_recurrent_lif, "DeltaG")}
         model.add_custom_update("input_recurrent_lif_l1", "L1", eprop.l1_model, 
                                                           l1_params, {}, input_recurrent_lif_l1_var_refs)
 
 # Add L1 optimisers to recurrent->recurrent connectivity if deep-r is enabled on it
 # **NOTE** these could run after reduction BUT then strength would have to vary with batch size
-if recurrent_recurrent_deep_r and not args.feedforward:
+if recurrent_recurrent_deep_r and not args.feedforward and args.l1_regularizer_strength > 0.0:
     if args.num_recurrent_alif > 0:
         recurrent_alif_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif, "DeltaG")}
         model.add_custom_update("recurrent_alif_recurrent_alif_l1", "L1", eprop.l1_model, 
@@ -574,7 +574,14 @@ if first_rank:
     if args.resume_epoch is None:
         performance_file = open(os.path.join(output_directory, "performance.csv"), "w")
         performance_csv = csv.writer(performance_file, delimiter=",")
-        performance_csv.writerow(("Epoch", "Batch", "Num trials", "Number correct"))
+        
+        row_columns = ["Epoch", "Batch", "Num trials", "Number correct"]
+        if input_recurrent_deep_r:
+            row_columns.append("Input Recurrent rewired")
+        if recurrent_recurrent_deep_r and not args.feedforward:
+            row_columns.append("Recurrent Recurrent rewired")
+        
+        performance_csv.writerow(row_columns)
     else:
         performance_file = open(os.path.join(output_directory, "performance.csv"), "a")
         performance_csv = csv.writer(performance_file, delimiter=",")
@@ -644,11 +651,6 @@ for epoch in range(epoch_start, args.num_epochs):
             num_correct = comm.allreduce(sendobj=num_correct, op=MPI.SUM)
             num_total = comm.allreduce(sendobj=num_total, op=MPI.SUM)
 
-        if first_rank:
-            print("\t\t%u / %u correct = %f %%" % (num_correct, num_total, 100.0 * num_correct / num_total))
-            performance_csv.writerow((epoch, batch_idx, num_total, num_correct))
-            performance_file.flush()
-
         # Update Adam optimiser scaling factors
         update_adam(learning_rate, adam_step, optimisers)
         adam_step += 1
@@ -658,7 +660,7 @@ for epoch in range(epoch_start, args.num_epochs):
             d.reset()
 
         # If Deep-R is enabled, perform L1 regularisation
-        if input_recurrent_deep_r or recurrent_recurrent_deep_r:
+        if (input_recurrent_deep_r or recurrent_recurrent_deep_r) and args.l1_regularizer_strength > 0.0:
             model.custom_update("L1")
 
         # Now batch is complete, reduce and then apply gradients
@@ -666,9 +668,13 @@ for epoch in range(epoch_start, args.num_epochs):
         model.custom_update("GradientLearn")
 
         # Update Deep-R optimisers
-        for d in deep_r:
-            d.update()
-
+        num_deep_r_rewire = [d.update() for d in deep_r]
+        
+        if first_rank:
+            print("\t\t%u / %u correct = %f %%" % (num_correct, num_total, 100.0 * num_correct / num_total))
+            performance_csv.writerow([epoch, batch_idx, num_total, num_correct] + num_deep_r_rewire)
+            performance_file.flush()
+    
         if args.reset_neurons:
             recurrent_lif_v_view[:] = 0.0
             output_y_view[:] = 0.0
