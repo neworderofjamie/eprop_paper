@@ -17,7 +17,7 @@ time_bar_x = [0, time_tick_x[1] - 0.22, time_tick_x[2] - 0.22, time_tick_x[3] - 
 time_deep_r_bar_x = [time_tick_x[1] + 0.22, time_tick_x[2] + 0.22, time_tick_x[3] + 0.22]
 
 dpi = 200
-fig, axes = plt.subplots(1, 2, figsize=(898 / 96.0, 500 / 96.0), dpi=96)
+fig, axes = plt.subplots(1, 2, figsize=(898 / dpi, 500 / dpi), dpi=dpi)
 
 time_axis = axes[0]
 time_actor = time_axis.bar(time_bar_x, train_time / 60000, width=time_bar_width)
