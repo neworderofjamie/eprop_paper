@@ -183,7 +183,6 @@ if args.num_recurrent_alif > 0:
         input_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.resume_epoch))
 
     if input_recurrent_deep_r:
-        input_recurrent_alif_params["CL1"] = args.l1_regularizer_strength
         input_recurrent_alif_params["NumExcitatory"] = float(num_input_neurons)
 
 if args.num_recurrent_lif > 0:
@@ -198,7 +197,6 @@ if args.num_recurrent_lif > 0:
         input_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.resume_epoch))
 
     if input_recurrent_deep_r:
-        input_recurrent_lif_params["CL1"] = args.l1_regularizer_strength
         input_recurrent_lif_params["NumExcitatory"] = float(num_input_neurons)
 
 # Recurrent->recurrent synapse parameters
@@ -215,7 +213,6 @@ if not args.feedforward:
             recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
 
         if recurrent_recurrent_deep_r:
-            recurrent_alif_recurrent_alif_params["CL1"] = args.l1_regularizer_strength
             recurrent_alif_recurrent_alif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_alif)
 
     if args.num_recurrent_lif > 0:
@@ -230,7 +227,6 @@ if not args.feedforward:
             recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
 
         if recurrent_recurrent_deep_r:
-            recurrent_lif_recurrent_lif_params["CL1"] = args.l1_regularizer_strength
             recurrent_lif_recurrent_lif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_lif)
 
 # Recurrent->output synapse parameters
@@ -252,6 +248,9 @@ if args.num_recurrent_lif > 0:
 # Optimiser initialisation
 adam_params = {"beta1": ADAM_BETA1, "beta2": ADAM_BETA2, "epsilon": 1E-8}
 adam_vars = {"m": 0.0, "v": 0.0}
+
+# L1 optimiser configuration
+l1_params = {"c": args.l1_regularizer_strength}
 
 # Batch reduction initialisation
 gradient_batch_reduce_vars = {"reducedGradient": 0.0}
@@ -335,6 +334,7 @@ if args.num_recurrent_alif > 0:
     output_recurrent_alif.ps_target_var = "ISynFeedback"
     
     if args.input_recurrent_max_row_length is not None:
+        assert False
         input_recurrent_alif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if args.num_recurrent_lif > 0:
@@ -358,6 +358,7 @@ if args.num_recurrent_lif > 0:
     output_recurrent_lif.ps_target_var = "ISynFeedback"
     
     if args.input_recurrent_max_row_length is not None:
+        assert False
         input_recurrent_lif.pop.set_max_connections(args.input_recurrent_max_row_length)
 
 if not args.feedforward:
@@ -380,6 +381,7 @@ if not args.feedforward:
             recurrent_recurrent_sparse_init)
 
         if args.recurrent_recurrent_max_row_length is not None:
+            assert False
             recurrent_alif_recurrent_alif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif = model.add_synapse_population(
@@ -391,6 +393,7 @@ if not args.feedforward:
             recurrent_recurrent_sparse_init)
 
         if args.recurrent_recurrent_max_row_length is not None:
+            assert False
             recurrent_lif_recurrent_lif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
 
 # Add custom update for calculating initial tranpose weights
@@ -400,6 +403,32 @@ if args.num_recurrent_alif > 0:
 if args.num_recurrent_lif > 0:
     model.add_custom_update("recurrent_lif_hidden_transpose", "CalculateTranspose", "Transpose",
                             {}, {}, {"variable": genn_model.create_wu_var_ref(recurrent_lif_output, "g", output_recurrent_lif, "g")})
+
+# Add L1 optimisers to input->recurrent connectivity if deep-r is enabled on it
+# **NOTE** these could run after reduction BUT then strength would have to vary with batch size
+if input_recurrent_deep_r:
+    if args.num_recurrent_alif > 0:
+        input_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(input_recurrent_alif, "DeltaG")}
+        model.add_custom_update("input_recurrent_alif_l1", "L1", eprop.l1_model, 
+                                l1_params, {}, input_recurrent_alif_l1_var_refs)
+
+    if args.num_recurrent_lif > 0:
+        input_recurrent_lif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(input_recurrent_lif, "DeltaG")}
+        model.add_custom_update("input_recurrent_lif_l1", "L1", eprop.l1_model, 
+                                                          l1_params, {}, input_recurrent_lif_l1_var_refs)
+
+# Add L1 optimisers to recurrent->recurrent connectivity if deep-r is enabled on it
+# **NOTE** these could run after reduction BUT then strength would have to vary with batch size
+if recurrent_recurrent_deep_r and not args.feedforward:
+    if args.num_recurrent_alif > 0:
+        recurrent_alif_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif, "DeltaG")}
+        model.add_custom_update("recurrent_alif_recurrent_alif_l1", "L1", eprop.l1_model, 
+                                l1_params, {}, recurrent_alif_recurrent_alif_l1_var_refs)
+    
+    if args.num_recurrent_lif > 0:
+        recurrent_lif_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "DeltaG")}
+        model.add_custom_update("recurrent_lif_recurrent_lif_l1", "L1", eprop.l1_model, 
+                                l1_params, {}, recurrent_lif_recurrent_lif_l1_var_refs)
 
 # Add custom updates for reducing gradients across the batch
 if args.num_recurrent_alif > 0:
@@ -627,6 +656,10 @@ for epoch in range(epoch_start, args.num_epochs):
         # Reset Deep-R optimisers
         for d in deep_r:
             d.reset()
+
+        # If Deep-R is enabled, perform L1 regularisation
+        if input_recurrent_deep_r or recurrent_recurrent_deep_r:
+            model.custom_update("L1")
 
         # Now batch is complete, reduce and then apply gradients
         model.custom_update("GradientBatchReduce")

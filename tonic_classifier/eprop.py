@@ -107,6 +107,14 @@ adam_optimizer_zero_gradient_track_dormant_model = genn_model.create_custom_cust
     }
     """)
 
+l1_model = genn_model.create_custom_custom_update_class(
+    "l1",
+    param_names=["c"],
+    var_refs=[("variable", "scalar")],
+    update_code="""
+    $(variable) += $(c);
+    """)
+    
 gradient_descent_zero_gradient_model = genn_model.create_custom_custom_update_class(
     "gradient_descent_zero_gradient",
     extra_global_params=[("eta", "scalar")],
@@ -324,7 +332,7 @@ eprop_alif_model = genn_model.create_custom_weight_update_class(
     
 eprop_alif_deep_r_model = genn_model.create_custom_weight_update_class(
     "eprop_alif_deep_r",
-    param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "CL1", "NumExcitatory"],
+    param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "NumExcitatory"],
     derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
                     ("Rho", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[1]))()),
                     ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[3] * dt) / 1000.0)()),
@@ -375,7 +383,7 @@ eprop_alif_deep_r_model = genn_model.create_custom_weight_update_class(
     eFiltered = (eFiltered * $(Alpha)) + e;
     
     // Apply weight update
-    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e)) + $(CL1);
+    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e));
     $(eFiltered) = eFiltered;
     """)
 
@@ -423,7 +431,7 @@ eprop_lif_model = genn_model.create_custom_weight_update_class(
 
 eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     "eprop_lif_deep_r",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "CL1", "NumExcitatory"],
+    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "NumExcitatory"],
     derived_params=[("Alpha", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
                     ("FTargetTimestep", genn_model.create_dpf_class(lambda pars, dt: (pars[2] * dt) / 1000.0)()),
                     ("AlphaFAv", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[3]))())],
@@ -463,7 +471,7 @@ eprop_lif_deep_r_model = genn_model.create_custom_weight_update_class(
     const scalar e = $(ZFilter) * $(Psi);
     scalar eFiltered = $(eFiltered);
     eFiltered = (eFiltered * $(Alpha)) + e;
-    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e)) + $(CL1);
+    $(DeltaG) += sign * ((eFiltered * $(E_post)) + (($(FAvg) - $(FTargetTimestep)) * $(CReg) * e));
     $(eFiltered) = eFiltered;
     """)
     

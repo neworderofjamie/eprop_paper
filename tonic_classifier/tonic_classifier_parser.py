@@ -17,7 +17,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--log-latency-threshold", type=int, default=51)
     parser.add_argument("--log-latency-tau", type=float, default=20.0)
     parser.add_argument("--regularizer-strength", type=float, default=0.001)
-    parser.add_argument("--l1-regularizer-strength", type=float, default=0.00001)
+    parser.add_argument("--l1-regularizer-strength", type=float, default=0.01)
     parser.add_argument("--input-recurrent-sparsity", type=float, default=1.0)
     parser.add_argument("--input-recurrent-max-row-length", type=int, default=None)
     parser.add_argument("--recurrent-recurrent-max-row-length", type=int, default=None)
