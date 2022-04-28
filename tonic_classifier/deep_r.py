@@ -72,7 +72,7 @@ class DeepR:
 
         # If no synapses have been made dormant, no need to do anything further
         if total_dormant == 0:
-            return
+            return 0
 
         # Download optimiser and synapse group state
         self.optimiser.pull_state_from_device()
@@ -145,6 +145,7 @@ class DeepR:
         num_total_padding_synapses = (self.sg.max_row_length * self.num_pre) - num_synapses
 
         # Loop through rows of synaptic matrix
+        num_remaining_dormant = total_dormant
         num_activations = np.zeros(self.num_pre, dtype=int)
         for i in range(self.num_pre - 1):
             num_row_padding_synapses = self.sg.max_row_length - self.sg._row_lengths[i]
@@ -153,16 +154,16 @@ class DeepR:
 
                 # Sample number of activations
                 num_row_activations = min(num_row_padding_synapses, 
-                                          np.random.binomial(total_dormant, probability))
+                                          np.random.binomial(num_remaining_dormant, probability))
                 num_activations[i] = num_row_activations;
 
                 # Update counters
-                total_dormant -= num_row_activations
+                num_remaining_dormant -= num_row_activations
                 num_total_padding_synapses -= num_row_padding_synapses
 
         # Put remainder of activations in last row
-        assert total_dormant < (self.sg.max_row_length - self.sg._row_lengths[-1])
-        num_activations[-1] = total_dormant;
+        assert num_remaining_dormant < (self.sg.max_row_length - self.sg._row_lengths[-1])
+        num_activations[-1] = num_remaining_dormant;
 
         # Loop through rows
         for i in range(self.num_pre):
@@ -207,3 +208,6 @@ class DeepR:
         self.optimiser.push_state_to_device()
         self.sg.push_state_to_device()
         self.sg.push_connectivity_to_device()
+        
+        # Return number of synapses which have been rewired
+        return total_dormant
