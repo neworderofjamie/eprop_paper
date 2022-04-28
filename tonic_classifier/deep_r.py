@@ -135,7 +135,7 @@ class DeepR:
 
         # Count number of remaining synapses
         num_synapses = np.sum(self.sg._row_lengths)
-        #print(f"De-activating and re-activating {total_dormant} synapses")
+        print(f"\t\tRewiring {total_dormant} synapses in {self.sg.name}")
 
         if DEBUG:
             # Check we've removed all dormant synapses
