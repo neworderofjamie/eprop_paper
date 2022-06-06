@@ -11,6 +11,11 @@ def label_rewiring_axis(axis):
     if len(axis_siblings) > 1:
         axis_siblings[0].set_ylabel("Num rewirings")
 
+def show_rewiring_legend(axis):
+    axis_siblings = axis.get_shared_x_axes().get_siblings(axis)
+    if len(axis_siblings) > 1:
+        axis_siblings[0].legend(loc="upper left")
+
 def plot(output_directory, axis):
     # Load training data
     training_data = np.loadtxt(os.path.join(output_directory, "performance.csv"), delimiter=",", skiprows=1)
@@ -34,15 +39,16 @@ def plot(output_directory, axis):
         rewiring_axis = axis.twinx()
         rewiring_axis.set_ylim((0, 1000))
     
+    colour_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"] 
     max_train_performance = 100.0 * (num_correct[-1] / num_trials[-1])
 
-    train_actor = axis.plot(100.0 * num_correct / num_trials, label="Training")[0]
+    train_actor = axis.plot(100.0 * num_correct / num_trials, label="Training", color=colour_cycle[len(num_rewirings)])[0]
     axis.axhline(max_train_performance, linestyle="--", color=train_actor.get_color())
     axis.annotate("%0.2f%%" % max_train_performance, (0.0, max_train_performance), 
                   ha="right", va="center", color=train_actor.get_color())
     
     for i, r in enumerate(num_rewirings):
-        rewiring_axis.plot(r, label=f"Rewiring {i}")
+        rewiring_axis.plot(r, label=f"Rewiring {i}", color=colour_cycle[i])
 
     # Find evaluation files, sorting numerically
     evaluate_files = list(sorted(glob(os.path.join(output_directory, "performance_evaluate_*.csv")),
@@ -76,7 +82,7 @@ def plot(output_directory, axis):
 
     if len(test_performance) > 0:
         # Plot
-        test_actor = axis.plot(test_epoch, test_performance, label="Testing")[0]
+        test_actor = axis.plot(test_epoch, test_performance, label="Testing", color=colour_cycle[len(num_rewirings) + 1])[0]
 
         max_test_performance = test_performance[min(int(max_epoch), len(test_performance) - 1)]
         axis.axhline(max_test_performance, linestyle="--", color=test_actor.get_color())
@@ -98,6 +104,6 @@ if __name__ == "__main__":
     axis.set_xlabel("Epoch")
     axis.set_ylabel("Performance [%]")
     label_rewiring_axis(axis)
-        
+    show_rewiring_legend(axis)
     axis.set_title(name_suffix)
     plt.show()

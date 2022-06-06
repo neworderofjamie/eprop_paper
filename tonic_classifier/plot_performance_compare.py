@@ -1,7 +1,7 @@
 import math
 import sys
 from matplotlib import pyplot as plt
-from plot_performance import plot
+from plot_performance import plot, show_rewiring_legend
 
 directories = sys.argv[1:]
 
@@ -26,6 +26,7 @@ for i, (a, d) in enumerate(zip(axes.flatten(), directories)):
 
     if i == 0:
         a.legend()
+        show_rewiring_legend(a)
 
 print("Best performance '%s': %f" % (best_trial[0], best_trial[1]))
 if num_rows > 1:
