@@ -213,7 +213,7 @@ if not args.feedforward:
             recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
 
         if recurrent_recurrent_deep_r:
-            recurrent_alif_recurrent_alif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_alif)
+            recurrent_alif_recurrent_alif_params["NumExcitatory"] = round(args.recurrent_excitatory_fraction * args.num_recurrent_alif)
 
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif_params = deepcopy(eprop_lif_params)
@@ -227,7 +227,7 @@ if not args.feedforward:
             recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
 
         if recurrent_recurrent_deep_r:
-            recurrent_lif_recurrent_lif_params["NumExcitatory"] = round(0.8 * args.num_recurrent_lif)
+            recurrent_lif_recurrent_lif_params["NumExcitatory"] = round(args.recurrent_excitatory_fraction * args.num_recurrent_lif)
 
 # Recurrent->output synapse parameters
 recurrent_output_params = {"TauE": 20.0}

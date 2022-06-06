@@ -223,7 +223,7 @@ if not args.feedforward:
 
         if recurrent_recurrent_deep_r:
             assert np.all(recurrent_alif_recurrent_alif_vars["g"] >= 0.0)
-            num_excitatory = round(0.8 * args.num_recurrent_alif)
+            num_excitatory = round(args.recurrent_excitatory_fraction * args.num_recurrent_alif)
             inhibitory_mask = (recurrent_alif_recurrent_alif_inds[0] >= num_excitatory)
             recurrent_alif_recurrent_alif_vars["g"][inhibitory_mask] *= -1.0
 
@@ -235,7 +235,7 @@ if not args.feedforward:
 
         if recurrent_recurrent_deep_r:
             assert np.all(recurrent_lif_recurrent_lif_vars["g"] >= 0.0)
-            num_excitatory = round(0.8 * args.num_recurrent_lif)
+            num_excitatory = round(args.recurrent_excitatory_fraction * args.num_recurrent_lif)
             inhibitory_mask = (recurrent_lif_recurrent_lif_inds[0] >= num_excitatory)
             recurrent_alif_recurrent_lif_vars["g"][inhibitory_mask] *= -1.0
 

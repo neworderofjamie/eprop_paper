@@ -22,6 +22,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--input-recurrent-max-row-length", type=int, default=None)
     parser.add_argument("--recurrent-recurrent-max-row-length", type=int, default=None)
     parser.add_argument("--recurrent-recurrent-sparsity", type=float, default=1.0)
+    parser.add_argument("--recurrent-excitatory-fraction", type=float, default=0.8)
     parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
     parser.add_argument("--suffix", default="")
     parser.add_argument("--seed", type=int, default=1234)
