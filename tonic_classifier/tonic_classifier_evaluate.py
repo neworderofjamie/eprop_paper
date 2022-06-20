@@ -166,6 +166,7 @@ input_recurrent_sparse = (args.input_recurrent_sparsity != 1.0)
 recurrent_recurrent_sparse = (args.recurrent_recurrent_sparsity != 1.0)
 input_recurrent_deep_r = args.deep_r and input_recurrent_sparse
 recurrent_recurrent_deep_r = args.deep_r and recurrent_recurrent_sparse
+input_recurrent_inh_deep_r = input_recurrent_deep_r and args.input_recurrent_inh_sparsity is not None
 
 # ----------------------------------------------------------------------------
 # Neuron initialisation
@@ -189,12 +190,18 @@ assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)
 if args.num_recurrent_alif > 0:
     # Input->recurrent synapse parameters
     input_recurrent_alif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_%u.npy" % args.trained_epoch))}
-
+    
     if input_recurrent_sparse:
         input_recurrent_alif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_%u.npy" % args.trained_epoch))
-
+    
     if input_recurrent_deep_r:
         assert np.all(input_recurrent_alif_vars["g"] >= 0.0)
+    
+    if input_recurrent_inh_deep_r:
+        input_recurrent_alif_inh_vars = {"g": -np.load(os.path.join(output_directory, "g_input_recurrent_inh_%u.npy" % args.trained_epoch))}
+        input_recurrent_alif_inh_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_inh_%u.npy" % args.trained_epoch))
+        
+        assert np.all(input_recurrent_alif_inh_vars["g"] <= 0.0)
 
     # Recurrent->output synapse parameters
     recurrent_alif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_output_%u.npy" % args.trained_epoch))}
@@ -204,11 +211,18 @@ if args.num_recurrent_lif > 0:
     input_recurrent_lif_vars = {"g": np.load(os.path.join(output_directory, "g_input_recurrent_lif_%u.npy" % args.trained_epoch))}
 
     if input_recurrent_sparse:
-        assert np.all(input_recurrent_alif_vars["g"] >= 0.0)
+        assert np.all(input_recurrent_lif_vars["g"] >= 0.0)
         input_recurrent_lif_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_lif_%u.npy" % args.trained_epoch))
 
     if input_recurrent_deep_r:
         assert np.all(input_recurrent_lif_vars["g"] >= 0.0)
+    
+    if input_recurrent_inh_deep_r:
+        input_recurrent_lif_inh_vars = {"g": -np.load(os.path.join(output_directory, "g_input_recurrent_lif__inh_%u.npy" % args.trained_epoch))}
+        input_recurrent_lif_inh_inds = np.load(os.path.join(output_directory, "ind_input_recurrent_lif_inh_%u.npy" % args.trained_epoch))
+        
+        assert np.all(input_recurrent_lif_inh_vars["g"] <= 0.0)
+
 
     # Recurrent->output synapse parameters
     recurrent_lif_output_vars = {"g": np.load(os.path.join(output_directory, "g_recurrent_lif_output_%u.npy" % args.trained_epoch))}
@@ -288,30 +302,51 @@ if args.num_recurrent_alif > 0:
         input, recurrent_alif,
         "StaticPulse", {}, input_recurrent_alif_vars, {}, {},
         "DeltaCurr", {}, {})
+    if input_recurrent_sparse:
+        input_recurrent_alif.set_sparse_connections(input_recurrent_alif_inds[0],
+                                                    input_recurrent_alif_inds[1])
+        
+    if input_recurrent_inh_deep_r:
+        input_recurrent_alif_inh = model.add_synapse_population(
+            "InputRecurrentALIFInh", input_recurrent_matrix_type, NO_DELAY,
+            input, recurrent_alif,
+            "StaticPulse", {}, input_recurrent_alif_inh_vars, {}, {},
+            "DeltaCurr", {}, {})
+        input_recurrent_alif_inh.set_sparse_connections(input_recurrent_alif_inh_inds[0],
+                                                        input_recurrent_alif_inh_inds[1])
+        
     recurrent_alif_output = model.add_synapse_population(
         "RecurrentALIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
         recurrent_alif, output,
         "StaticPulse", {}, recurrent_alif_output_vars, {}, {},
         "DeltaCurr", {}, {})
-    
-    if input_recurrent_sparse:
-        input_recurrent_alif.set_sparse_connections(input_recurrent_alif_inds[0],
-                                                    input_recurrent_alif_inds[1])
+        
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
         "InputRecurrentLIF", input_recurrent_matrix_type, NO_DELAY,
         input, recurrent_lif,
         "StaticPulse", {}, input_recurrent_lif_vars, {}, {},
         "DeltaCurr", {}, {})
+    
+    if input_recurrent_sparse:
+        input_recurrent_lif.set_sparse_connections(input_recurrent_lif_inds[0],
+                                                   input_recurrent_lif_inds[1])
+    
+    if input_recurrent_inh_deep_r:
+        input_recurrent_lif_inh = model.add_synapse_population(
+            "InputRecurrentLIFInh", input_recurrent_matrix_type, NO_DELAY,
+            input, recurrentalif,
+            "StaticPulse", {}, input_recurrent_lif_inh_vars, {}, {},
+            "DeltaCurr", {}, {})
+        input_recurrent_lif_inh.set_sparse_connections(input_recurrent_lif_inh_inds[0],
+                                                       input_recurrent_lif_inh_inds[1])
+
     recurrent_lif_output = model.add_synapse_population(
         "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
         recurrent_lif, output,
         "StaticPulse", {}, recurrent_lif_output_vars, {}, {},
         "DeltaCurr", {}, {})
     
-    if input_recurrent_sparse:
-        input_recurrent_lif.set_sparse_connections(input_recurrent_lif_inds[0],
-                                                   input_recurrent_lif_inds[1])
 
 if not args.feedforward:
     recurrent_recurrent_matrix_type = ("SPARSE_INDIVIDUALG" if recurrent_recurrent_sparse
@@ -467,7 +502,6 @@ for batch_idx, (events, labels) in enumerate(data_iter):
     batch_end_time = perf_counter()
     batch_times.append((batch_end_time - batch_start_time) * 1000.0)
     print("\t\tTime:%f ms" % batch_times[-1])
-    
 
 end_time = perf_counter()
 print("%u / %u correct = %f %%" % (total_num_correct, total_num, 100.0 * total_num_correct / total_num))
