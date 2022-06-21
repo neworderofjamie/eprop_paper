@@ -42,13 +42,13 @@ def plot(output_directory, axis):
     colour_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"] 
     max_train_performance = 100.0 * (num_correct[-1] / num_trials[-1])
 
-    train_actor = axis.plot(100.0 * num_correct / num_trials, label="Training", color=colour_cycle[len(num_rewirings)])[0]
+    train_actor = axis.plot(100.0 * num_correct / num_trials, label="Training", color=colour_cycle[0])[0]
     axis.axhline(max_train_performance, linestyle="--", color=train_actor.get_color())
     axis.annotate("%0.2f%%" % max_train_performance, (0.0, max_train_performance), 
                   ha="right", va="center", color=train_actor.get_color())
     
     for i, r in enumerate(num_rewirings):
-        rewiring_axis.plot(r, label=f"Rewiring {i}", color=colour_cycle[i])
+        rewiring_axis.plot(r, label=f"Rewiring {i}", color=colour_cycle[2 + i])
 
     # Find evaluation files, sorting numerically
     evaluate_files = list(sorted(glob(os.path.join(output_directory, "performance_evaluate_*.csv")),
@@ -82,7 +82,7 @@ def plot(output_directory, axis):
 
     if len(test_performance) > 0:
         # Plot
-        test_actor = axis.plot(test_epoch, test_performance, label="Testing", color=colour_cycle[len(num_rewirings) + 1])[0]
+        test_actor = axis.plot(test_epoch, test_performance, label="Testing", color=colour_cycle[1])[0]
 
         max_test_performance = test_performance[min(int(max_epoch), len(test_performance) - 1)]
         axis.axhline(max_test_performance, linestyle="--", color=test_actor.get_color())
