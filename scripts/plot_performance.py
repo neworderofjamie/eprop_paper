@@ -7,6 +7,7 @@ import seaborn as sns
 
 from collections import namedtuple
 from glob import glob
+from itertools import product
 from six import iterkeys, itervalues
 
 BAR_WIDTH = 1.0
@@ -26,7 +27,7 @@ class Config(object):
         # Loop through experiment files
         for name, file_prefix in experiment_files:
             # Find all directories containing runs of this experiment
-            data_directories = glob(os.path.join("performance_data", file_prefix + "_100_epochs_*"))
+            data_directories = glob(os.path.join("performance_data", file_prefix))# + "_100_epochs_*"))
             
             # Read test performance
             test_performance = [self._get_test_performance(d) for d in data_directories]
@@ -112,30 +113,40 @@ def plot(configs):
     fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.2, 1.0, 1.0])
     return fig
 
-
 shd_configs = [Config("256 neurons", 
-                     [("GeNN (eProp LSNN FF)", "shd_256_feedforward"), ("GeNN (eProp LSNN RC)", "shd_256")],
+                     [("GeNN (eProp LSNN FF)", "shd_256_feedforward_100_epochs_*"), ("GeNN (eProp LSNN RC)", "shd_256_100_epochs_*")],
                      [Performance("PyTorch (BPTT LIF FF)", 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)", 80.0, 2.0)]),
               Config("512 neurons", 
-                     [("GeNN (eProp LSNN FF)", "shd_512_feedforward"), ("GeNN (eProp LSNN RC)", "shd_512")],
+                     [("GeNN (eProp LSNN FF)", "shd_512_feedforward_100_epochs_*"), ("GeNN (eProp LSNN RC)", "shd_512_100_epochs_*")],
                      []),
               Config("1024 neurons", 
-                     [("GeNN (eProp LSNN FF)", "shd_1024_feedforward"), ("GeNN (eProp LSNN RC)", "shd_1024")],
+                     [("GeNN (eProp LSNN FF)", "shd_1024_feedforward_100_epochs_*"), ("GeNN (eProp LSNN RC)", "shd_1024_100_epochs_*")],
                      [])]
 
 smnist_configs = [Config("256 neurons", 
-                         [("GeNN (eProp LSNN RC)", "smnist_256")],
+                         [("GeNN (eProp LSNN RC)", "smnist_256_100_epochs_*")],
                          [Performance("TensorFlow (BPTT LSNN RC)", 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)", 63.3, 0.0)]),
                   Config("512 neurons", 
-                         [("GeNN (eProp LSNN RC)", "smnist_512")],
+                         [("GeNN (eProp LSNN RC)", "smnist_512_100_epochs_*")],
                          []),
                   Config("1024 neurons", 
-                         [("GeNN (eProp LSNN RC)", "smnist_1024")],
+                         [("GeNN (eProp LSNN RC)", "smnist_1024_100_epochs_*")],
                          [])]
 
+connectivities = [0.01, 0.05, 0.1]
+experiments = [("Fixed", ""), ("Deep-R 80:20", "_deep_r_80_20"), ("Deep-R 50:50", "_deep_r_50_50")]
+sparse_configs = [Config(f"{in_rec * 100}% input-recurrent\n{rec_rec * 100}% recurrent-recurrent",
+                         [(e[0], f"shd_256_new_sparse_{in_rec}_{rec_rec}{e[1]}") for e in experiments],
+                         [])
+                  for in_rec, rec_rec in product(connectivities, repeat=2)]
+                                 
 shd_fig = plot(shd_configs)
 smnist_fig = plot(smnist_configs)
+sparse_fig = plot(sparse_configs)                         
+
 if not plot_settings.presentation:
     shd_fig.savefig("../figures/shd_performance.pdf")
     smnist_fig.savefig("../figures/smnist_performance.pdf")
+    sparse_fig.savefig("../figures/sparse_performance.pdf")
+
 plt.show()
