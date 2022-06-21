@@ -5,9 +5,8 @@ from itertools import chain
 from matplotlib import pyplot as plt
 from plot_performance import plot, show_rewiring_legend
 
+# Expand any remaining wildcards
 directories = list(chain.from_iterable(glob(a) for a in sys.argv[1:]))
-print(directories)
-#directories = sys.argv[1:]
 
 num_results = len(directories)
 num_cols = int(math.ceil(math.sqrt(num_results)))
