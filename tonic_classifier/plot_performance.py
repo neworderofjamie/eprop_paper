@@ -6,17 +6,7 @@ from matplotlib import pyplot as plt
 
 from tonic_classifier_parser import parse_arguments
 
-def label_rewiring_axis(axis):
-    axis_siblings = axis.get_shared_x_axes().get_siblings(axis)
-    if len(axis_siblings) > 1:
-        axis_siblings[0].set_ylabel("Num rewirings")
-
-def show_rewiring_legend(axis):
-    axis_siblings = axis.get_shared_x_axes().get_siblings(axis)
-    if len(axis_siblings) > 1:
-        axis_siblings[0].legend(loc="upper left")
-
-def plot(output_directory, axis):
+def plot(output_directory, axis, rewiring_axis):
     # Load training data
     training_data = np.loadtxt(os.path.join(output_directory, "performance.csv"), delimiter=",", skiprows=1)
     
@@ -36,7 +26,6 @@ def plot(output_directory, axis):
             num_rewirings[j][i] = np.sum(training_data[epoch_mask, j + 4])
     
     if len(num_rewirings) > 0:
-        rewiring_axis = axis.twinx()
         rewiring_axis.set_ylim((0, 1000))
     
     colour_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"] 
@@ -97,13 +86,15 @@ if __name__ == "__main__":
     name_suffix, output_directory, _ = parse_arguments(description="Plot eProp classifier performance")
     
     fig, axis = plt.subplots()
-    max_train_performance, max_test_performance = plot(output_directory, axis)
+    rewiring_axis = axis.twinx()
+    max_train_performance, max_test_performance = plot(output_directory, axis, rewiring_axis)
     print("Max training performance: %f%%" % max_train_performance)
     print("Max testing performance: %f%%" % max_test_performance)
-    axis.legend()
+    
+    axis.legend(loc="upper right")
+    rewiring_axis.legend(loc="upper left")
     axis.set_xlabel("Epoch")
     axis.set_ylabel("Performance [%]")
-    label_rewiring_axis(axis)
-    show_rewiring_legend(axis)
+    rewiring_axis.set_ylabel("Num rewirings")
     axis.set_title(name_suffix)
     plt.show()

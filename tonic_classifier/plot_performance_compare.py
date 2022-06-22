@@ -3,7 +3,7 @@ import sys
 from glob import glob
 from itertools import chain
 from matplotlib import pyplot as plt
-from plot_performance import plot, show_rewiring_legend
+from plot_performance import plot
 
 # Expand any remaining wildcards
 directories = list(chain.from_iterable(glob(a) for a in sys.argv[1:]))
@@ -16,9 +16,9 @@ fig, axes = plt.subplots(num_rows, num_cols, sharex="col", sharey="row")
 
 best_trial = None
 for i, (a, d) in enumerate(zip(axes.flatten(), directories)):
-    a.set_title(d)
-    max_train_performance, max_test_performance = plot(d, a)
-    print(d)
+    a.set_title(d, size="xx-small")
+    rewiring_axis = a.twinx()
+    max_train_performance, max_test_performance = plot(d, a, rewiring_axis)
     print("\tMax training performance: %f%%" % max_train_performance)
     print("\tMax testing performance: %f%%" % max_test_performance)
 
@@ -28,8 +28,8 @@ for i, (a, d) in enumerate(zip(axes.flatten(), directories)):
          best_trial = (d, max_test_performance)
 
     if i == 0:
-        a.legend()
-        show_rewiring_legend(a)
+        a.legend(loc="upper right")
+        rewiring_axis.legend(loc="upper left")
 
 print("Best performance '%s': %f" % (best_trial[0], best_trial[1]))
 if num_rows > 1:
