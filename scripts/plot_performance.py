@@ -53,7 +53,7 @@ class Config(object):
         return 100.0 * (num_correct / num_trials)
 
 
-def plot(configs):
+def plot(configs, width=plot_settings.column_width, height=2.0):
     pal = sns.color_palette()
     colour_map = {}
 
@@ -96,11 +96,11 @@ def plot(configs):
         # Add extra padding between groups
         last_x += (GROUP_PAD - BAR_PAD)
 
-    fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+    fig, axis = plt.subplots(figsize=(width, height))
     actors = axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error, color=bar_colour)
 
     axis.set_xticks(group_x)
-    axis.set_xticklabels([c.name for c in configs], ha="center")
+    axis.set_xticklabels([c.name for c in configs], ha="center", size="xx-small" if plot_settings.poster else None)
     axis.set_ylabel("Accuracy [%]")
     axis.set_ylim((0, 100.0))
 
@@ -110,7 +110,8 @@ def plot(configs):
 
     fig.legend([mpatches.Rectangle(color=c, width=10, height=10, xy=(0,0)) for c in itervalues(colour_map)], 
                iterkeys(colour_map), loc="lower center", ncol=len(colour_map) if plot_settings.presentation else 2)
-    fig.tight_layout(pad=0, rect=[0.0, 0.025 if plot_settings.presentation else 0.2, 1.0, 1.0])
+    fig.tight_layout(pad=0, rect=[0.0, 0.2 if plot_settings.presentation or plot_settings.poster 
+                                  else 0.2, 1.0, 1.0])
     return fig
 
 shd_configs = [Config("256 neurons", 
@@ -134,17 +135,18 @@ smnist_configs = [Config("256 neurons",
                          [])]
 
 connectivities = [0.01, 0.05, 0.1]
-experiments = [("Fixed", ""), ("Deep-R 80:20", "_deep_r_80_20"), ("Deep-R 50:50", "_deep_r_50_50")]
-sparse_configs = [Config(f"{in_rec * 100}% input-recurrent\n{rec_rec * 100}% recurrent-recurrent",
-                         [(e[0], f"shd_256_new_sparse_{in_rec}_{rec_rec}{e[1]}") for e in experiments],
+experiments = [("Sparse Fixed", ""), ("Sparse Deep-R", "_deep_r_80_20")]#, ("Deep-R 50:50", "_deep_r_50_50")]
+sparse_configs = [Config(f"{in_rec * 100:.0f}% input\n{rec_rec * 100:.0f}% recurrent",
+                         [(e[0], f"shd_256_new_sparse_{in_rec}_{rec_rec}{e[1]}_epochs_*") for e in experiments],
                          [])
                   for in_rec, rec_rec in product(connectivities, repeat=2)]
                                  
 shd_fig = plot(shd_configs)
 smnist_fig = plot(smnist_configs)
-sparse_fig = plot(sparse_configs)                         
+sparse_fig = plot([Config("Dense", [("Dense Recurrent", "shd_256_100_epochs_*"), ("Dense Feedforward", "shd_256_feedforward_100_epochs_*")], [])] + sparse_configs,
+                  width=20.0, height=10.0)                         
 
-if not plot_settings.presentation:
+if not plot_settings.presentation and not plot_settings.poster:
     shd_fig.savefig("../figures/shd_performance.pdf")
     smnist_fig.savefig("../figures/smnist_performance.pdf")
     sparse_fig.savefig("../figures/sparse_performance.pdf")
