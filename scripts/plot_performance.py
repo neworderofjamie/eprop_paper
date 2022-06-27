@@ -8,13 +8,14 @@ import seaborn as sns
 from collections import namedtuple
 from glob import glob
 from itertools import product
+from scipy.stats import wilcoxon
 from six import iterkeys, itervalues
 
 BAR_WIDTH = 1.0
 BAR_PAD = 0.2
 GROUP_PAD = 1.0
 
-Performance = namedtuple("Performance", ["name", "test_mean", "test_sd"])
+Performance = namedtuple("Performance", ["name", "data", "test_mean", "test_sd"])
 
 class Config(object):
     def __init__(self, name, experiment_files, references):
@@ -33,7 +34,9 @@ class Config(object):
             test_performance = [self._get_test_performance(d) for d in data_directories]
 
             ## Add performance tuple
-            self.performances.append(Performance(name, np.mean(test_performance), np.std(test_performance)))
+            self.performances.append(Performance(name, test_performance, 
+                                                 np.mean(test_performance), 
+                                                 np.std(test_performance)))
     
     def _get_test_performance(self, path):
         # Find evaluation files, sorting numerically
@@ -112,11 +115,11 @@ def plot(configs, width=plot_settings.column_width, height=2.0):
                iterkeys(colour_map), loc="lower center", ncol=len(colour_map) if plot_settings.presentation else 2)
     fig.tight_layout(pad=0, rect=[0.0, 0.2 if plot_settings.presentation or plot_settings.poster 
                                   else 0.2, 1.0, 1.0])
-    return fig
+    return fig, axis
 
 shd_configs = [Config("256 neurons", 
                      [("GeNN (eProp LSNN FF)", "shd_256_feedforward_100_epochs_*"), ("GeNN (eProp LSNN RC)", "shd_256_100_epochs_*")],
-                     [Performance("PyTorch (BPTT LIF FF)", 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)", 80.0, 2.0)]),
+                     [Performance("PyTorch (BPTT LIF FF)", None, 74.0, 1.7), Performance("PyTorch (BPTT LIF RC)", None, 80.0, 2.0)]),
               Config("512 neurons", 
                      [("GeNN (eProp LSNN FF)", "shd_512_feedforward_100_epochs_*"), ("GeNN (eProp LSNN RC)", "shd_512_100_epochs_*")],
                      []),
@@ -126,7 +129,7 @@ shd_configs = [Config("256 neurons",
 
 smnist_configs = [Config("256 neurons", 
                          [("GeNN (eProp LSNN RC)", "smnist_256_100_epochs_*")],
-                         [Performance("TensorFlow (BPTT LSNN RC)", 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)", 63.3, 0.0)]),
+                         [Performance("TensorFlow (BPTT LSNN RC)", None, 96.4, 0.0), Performance("TensorFlow (BPTT LIF RC)", None, 63.3, 0.0)]),
                   Config("512 neurons", 
                          [("GeNN (eProp LSNN RC)", "smnist_512_100_epochs_*")],
                          []),
@@ -152,12 +155,19 @@ deep_r_configs = [Config(f"10% input\n{rec_con * 100:.0f}% recurrent",
                          [(e[0], f"shd_256_new_sparse_0.1_{rec_con}{e[1]}_epochs_*") for e in experiments],
                          [])
                   for rec_con in connectivities]
-shd_fig = plot(shd_configs)
-smnist_fig = plot(smnist_configs)
-sparse_fig = plot([Config("100% input", [("100% recurrent", "shd_256_100_epochs_*"), ("0% recurrent", "shd_256_feedforward_100_epochs_*")], [])] + sparse_configs,
-                  width=20.0, height=10.0)
-deep_r_fig = plot([Config("Dense", [("Dense Recurrent", "shd_256_100_epochs_*"), ("Dense Feedforward", "shd_256_feedforward_100_epochs_*")], [])] + deep_r_configs,
-                   width=20.0, height=10.0)
+
+shd_fig, _ = plot(shd_configs)
+smnist_fig, _ = plot(smnist_configs)
+sparse_fig, _ = plot([Config("100% input", [("100% recurrent", "shd_256_100_epochs_*"), ("0% recurrent", "shd_256_feedforward_100_epochs_*")], [])] + sparse_configs,
+                     width=20.0, height=10.0)
+deep_r_fig, deep_r_axis = plot([Config("Dense", [("Dense Recurrent", "shd_256_100_epochs_*"), ("Dense Feedforward", "shd_256_feedforward_100_epochs_*")], [])] + deep_r_configs,
+                               width=20.0, height=10.0)
+
+# Calculate p-values
+for c in deep_r_configs:
+    print(c.name)
+    print(f"\t{c.performances[0].name} vs {c.performances[1].name}")
+    print(f"\t{wilcoxon(c.performances[0].data, c.performances[1].data, alternative='less', mode='exact')}")
                   
 if not plot_settings.presentation and not plot_settings.poster:
     shd_fig.savefig("../figures/shd_performance.pdf")
