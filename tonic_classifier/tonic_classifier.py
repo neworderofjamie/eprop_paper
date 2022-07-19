@@ -95,14 +95,12 @@ if args.dataset == "shd":
     dataset = tonic.datasets.SHD(save_to='./data', train=True)
     sensor_size = dataset.sensor_size
 elif args.dataset == "smnist":
-    dataset = tonic.datasets.SMNIST(save_to='./data', train=True, duplicate=False, num_neurons=79, 
-                                    download=not args.no_download_dataset)
+    dataset = tonic.datasets.SMNIST(save_to='./data', train=True, duplicate=False, num_neurons=79)
     sensor_size = dataset.sensor_size
 elif args.dataset == "dvs_gesture":
     transform = tonic.transforms.Compose([
         tonic.transforms.Downsample(spatial_factor=0.25)])
-    dataset = tonic.datasets.DVSGesture(save_to='./data', train=True, transform=transform, 
-                                        download=not args.no_download_dataset)
+    dataset = tonic.datasets.DVSGesture(save_to='./data', train=True, transform=transform)
     sensor_size = (32, 32, 2)
 elif args.dataset == "mnist":
     num_outputs = 10
