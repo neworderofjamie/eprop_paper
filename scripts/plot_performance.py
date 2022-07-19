@@ -56,6 +56,29 @@ class Config(object):
         return 100.0 * (num_correct / num_trials)
 
 
+def plot_simple(config, width=plot_settings.column_width, height=2.0, x_label=None):
+    bar_x = np.arange(len(config.performances)) * (BAR_PAD + BAR_WIDTH)
+    bar_height = [p.test_mean for p in config.performances]
+    bar_error = [p.test_sd for p in config.performances]
+    
+    fig, axis = plt.subplots(figsize=(width, height))
+    axis.bar(bar_x, bar_height, BAR_WIDTH, yerr=bar_error)
+
+    axis.set_xticks(bar_x)
+    axis.set_xticklabels([p.name for p in config.performances], ha="center")
+    axis.set_ylabel("Accuracy [%]")
+    axis.set_ylim((0, 100.0))
+    
+    if x_label is not None:
+        axis.set_xlabel(x_label)
+    
+    # Remove axis junk
+    sns.despine(ax=axis)
+    axis.xaxis.grid(False)
+
+    fig.tight_layout(pad=0, rect=[0.0, 0.0, 1.0, 1.0])
+    return fig, axis
+
 def plot(configs, width=plot_settings.column_width, height=2.0):
     pal = sns.color_palette()
     colour_map = {}
@@ -112,7 +135,7 @@ def plot(configs, width=plot_settings.column_width, height=2.0):
     axis.xaxis.grid(False)
 
     fig.legend([mpatches.Rectangle(color=c, width=10, height=10, xy=(0,0)) for c in itervalues(colour_map)], 
-               iterkeys(colour_map), loc="lower center", ncol=len(colour_map) if plot_settings.presentation else 2)
+               iterkeys(colour_map), loc="lower center", ncol=len(colour_map) if plot_settings.presentation or plot_settings.poster else 2)
     fig.tight_layout(pad=0, rect=[0.0, 0.2 if plot_settings.presentation or plot_settings.poster 
                                   else 0.2, 1.0, 1.0])
     return fig, axis
@@ -137,13 +160,6 @@ smnist_configs = [Config("256 neurons",
                          [("GeNN (eProp LSNN RC)", "smnist_1024_100_epochs_*")],
                          [])]
 
-#connectivities = [0.01, 0.05, 0.1]
-#experiments = [("Sparse Fixed", ""), ("Sparse Deep-R", "_deep_r_80_20")]#, ("Deep-R 50:50", "_deep_r_50_50")]
-#sparse_configs = [Config(f"{in_rec * 100:.0f}% input\n{rec_rec * 100:.0f}% recurrent",
-#                         [(e[0], f"shd_256_new_sparse_{in_rec}_{rec_rec}{e[1]}_epochs_*") for e in experiments],
-#                         [])
-#                  for in_rec, rec_rec in product(connectivities, repeat=2)]
-
 connectivities = [0.1, 0.05, 0.01]
 sparse_configs = [Config(f"{in_con * 100:.0f}% input",
                          [(f"{rec_con * 100:.0f}% recurrent", f"shd_256_new_sparse_{in_con}_{rec_con}_epochs_*") for rec_con in connectivities],
@@ -158,10 +174,15 @@ deep_r_configs = [Config(f"10% input\n{rec_con * 100:.0f}% recurrent",
 
 shd_fig, _ = plot(shd_configs)
 smnist_fig, _ = plot(smnist_configs)
-sparse_fig, _ = plot([Config("100% input", [("100% recurrent", "shd_256_100_epochs_*"), ("0% recurrent", "shd_256_feedforward_100_epochs_*")], [])] + sparse_configs,
-                     width=20.0, height=10.0)
-deep_r_fig, deep_r_axis = plot([Config("Dense", [("Dense Recurrent", "shd_256_100_epochs_*"), ("Dense Feedforward", "shd_256_feedforward_100_epochs_*")], [])] + deep_r_configs,
-                               width=20.0, height=10.0)
+sparse_fig, _ = plot_simple(Config("",
+                            [("100%", "shd_256_100_epochs_*"), 
+                             ("10%", "shd_256_new_sparse_0.1_0.1_epochs_*"), 
+                             ("5%", "shd_256_new_sparse_0.05_0.05_epochs_*"), 
+                             ("1%", "shd_256_new_sparse_0.01_0.01_epochs_*")],
+                            []), width=9.64, height=4.75, x_label="Connection density")
+
+deep_r_fig, deep_r_axis = plot([Config("100%", [("Dense", "shd_256_100_epochs_*")], [])] + deep_r_configs,
+                               width=9.64, height=5.0)
 
 # Calculate p-values
 for c in deep_r_configs:
