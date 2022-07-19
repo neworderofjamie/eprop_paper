@@ -269,13 +269,6 @@ output_classification_model_32 = genn_model.create_custom_neuron_class(
 #----------------------------------------------------------------------------
 # Weight update models
 #----------------------------------------------------------------------------
-feedback_model = genn_model.create_custom_weight_update_class(
-    "feedback",
-    var_name_types=[("g", "scalar", VarAccess_READ_ONLY)],
-    synapse_dynamics_code="""
-    $(addToInSyn, $(g) * $(E_pre));
-    """)
-
 eprop_alif_model = genn_model.create_custom_weight_update_class(
     "eprop_alif",
     param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta"],
@@ -495,4 +488,5 @@ output_learning_model = genn_model.create_custom_weight_update_class(
 
     synapse_dynamics_code="""
     $(DeltaG) += $(ZFilter) * $(E_post);
+    $(addToPre, $(g) * $(E_post));
     """)
