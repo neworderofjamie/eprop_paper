@@ -352,12 +352,7 @@ if args.num_recurrent_alif > 0:
         recurrent_alif, output,
         eprop.output_learning_model, recurrent_output_params, recurrent_alif_output_vars, recurrent_output_pre_vars, {},
         "DeltaCurr", {}, {})
-    output_recurrent_alif = model.add_synapse_population(
-        "OutputRecurrentALIF", "DENSE_INDIVIDUALG", NO_DELAY,
-        output, recurrent_alif,
-        eprop.feedback_model, {}, {"g": 0.0}, {}, {},
-        "DeltaCurr", {}, {})
-    output_recurrent_alif.ps_target_var = "ISynFeedback"
+    recurrent_alif_output.pre_target_var = "ISynFeedback"
     
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
@@ -385,12 +380,7 @@ if args.num_recurrent_lif > 0:
         recurrent_lif, output,
         eprop.output_learning_model, recurrent_output_params, recurrent_lif_output_vars, recurrent_output_pre_vars, {},
         "DeltaCurr", {}, {})
-    output_recurrent_lif = model.add_synapse_population(
-        "OutputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
-        output, recurrent_lif,
-        eprop.feedback_model, {}, {"g": 0.0}, {}, {},
-        "DeltaCurr", {}, {})
-    output_recurrent_lif.ps_target_var = "ISynFeedback"
+    recurrent_lif_output.pre_target_var = "ISynFeedback"
     
     
 
@@ -426,14 +416,6 @@ if not args.feedforward:
 
         if args.recurrent_recurrent_max_row_length is not None:
             recurrent_lif_recurrent_lif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
-
-# Add custom update for calculating initial tranpose weights
-if args.num_recurrent_alif > 0:
-    model.add_custom_update("recurrent_alif_hidden_transpose", "CalculateTranspose", "Transpose",
-                            {}, {}, {"variable": genn_model.create_wu_var_ref(recurrent_alif_output, "g", output_recurrent_alif, "g")})
-if args.num_recurrent_lif > 0:
-    model.add_custom_update("recurrent_lif_hidden_transpose", "CalculateTranspose", "Transpose",
-                            {}, {}, {"variable": genn_model.create_wu_var_ref(recurrent_lif_output, "g", output_recurrent_lif, "g")})
 
 # Add L1 optimisers to input->recurrent connectivity if deep-r is enabled on it
 # **NOTE** these could run after reduction BUT then strength would have to vary with batch size
@@ -532,13 +514,14 @@ if args.num_recurrent_alif > 0:
         input_recurrent_alif_inh_optimiser = model.add_custom_update("input_recurrent_alif_inh_optimiser", "GradientLearn", input_recurrent_optimizer_model, 
                                                                     adam_params, adam_vars, input_recurrent_alif_inh_optimiser_var_refs)
         
+        optimisers.append(input_recurrent_alif_inh_optimiser)
         deep_r.append(DeepR(input_recurrent_alif_inh, input_recurrent_alif_inh_optimiser, num_input_neurons, args.num_recurrent_alif))
     
     recurrent_alif_output_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_alif_output_reduction, "reducedGradient"),
-                                                "variable": genn_model.create_wu_var_ref(recurrent_alif_output, "g" , output_recurrent_alif, "g")}
+                                                "variable": genn_model.create_wu_var_ref(recurrent_alif_output, "g")}
     recurrent_alif_output_optimiser = model.add_custom_update("recurrent_alif_output_optimiser", "GradientLearn", eprop.adam_optimizer_model,
                                                               adam_params, adam_vars, recurrent_alif_output_optimiser_var_refs)
-    optimisers.extend([recurrent_alif_output_optimiser, input_recurrent_alif_optimiser, input_recurrent_alif_inh_optimiser])
+    optimisers.extend([recurrent_alif_output_optimiser, input_recurrent_alif_optimiser])
 
 
 if args.num_recurrent_lif > 0:
@@ -555,11 +538,11 @@ if args.num_recurrent_lif > 0:
                                                       "variable": genn_model.create_wu_var_ref(input_recurrent_lif_inh, "g")}
         input_recurrent_lif_inh_optimiser = model.add_custom_update("input_recurrent_lif_inh_optimiser", "GradientLearn", input_recurrent_optimizer_model,
                                                                     adam_params, adam_vars, input_recurrent_lif_inh_optimiser_var_refs)
-        
+        optimisers.append(input_recurrent_lif_inh_optimiser)
         deep_r.append(DeepR(input_recurrent_lif_inh, input_recurrent_lif_inh_optimiser, num_input_neurons, args.num_recurrent_lif))
     
     recurrent_lif_output_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_output_reduction, "reducedGradient"),
-                                               "variable": genn_model.create_wu_var_ref(recurrent_lif_output, "g" , output_recurrent_lif, "g")}
+                                               "variable": genn_model.create_wu_var_ref(recurrent_lif_output)}
     recurrent_lif_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.adam_optimizer_model,
                                                              adam_params, adam_vars, recurrent_lif_output_optimiser_var_refs)
     optimisers.extend([recurrent_lif_output_optimiser, input_recurrent_lif_optimiser])
@@ -616,9 +599,6 @@ if args.use_nccl:
 
     # Initialise NCCL communicator
     model._slm.nccl_init_communicator(rank, num_ranks)
-
-# Calculate initial transpose feedback weights
-model.custom_update("CalculateTranspose")
 
 # Load Deep-R optimisers
 for d in deep_r:
@@ -852,4 +832,3 @@ if first_rank:
         print("Synapse dynamics: %f" % model.synapse_dynamics_time)
         print("Gradient batch reduction custom update: %f" % model.get_custom_update_time("GradientBatchReduce"))
         print("Gradient learning custom update: %f" % model.get_custom_update_time("GradientLearn"))
-        print("Gradient learning custom update transpose: %f" % model.get_custom_update_transpose_time("GradientLearn"))
