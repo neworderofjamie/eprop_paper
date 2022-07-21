@@ -117,6 +117,7 @@ encoder = None
 spiking = True
 num_outputs = None
 num_input_neurons = None
+time_scale = 1.0 / 1000.0
 if args.dataset == "shd":
     dataset = tonic.datasets.SHD(save_to='./data', train=args.hold_back_validate is not None)
     sensor_size = dataset.sensor_size
@@ -130,6 +131,7 @@ elif args.dataset == "dvs_gesture":
     dataset = tonic.datasets.DVSGesture(save_to='./data', train=args.hold_back_validate is not None,
                                         transform=transform)
     sensor_size = (32, 32, 2)
+    time_scale = 1.0
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(args.hold_back_validate is not None)
@@ -147,7 +149,8 @@ if spiking:
     num_outputs = len(dataset.classes)
     num_input_neurons = np.product(sensor_size) 
     data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
-                                               sensor_size=sensor_size, dataset_slice=dataset_slice)
+                                               sensor_size=sensor_size, dataset_slice=dataset_slice,
+                                               time_scale=time_scale)
 else:
     assert encoder is not None
     num_input_neurons = np.product(dataset[0].shape[1:])

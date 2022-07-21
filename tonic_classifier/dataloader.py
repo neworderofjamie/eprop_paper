@@ -150,7 +150,7 @@ class DataIter:
 
 class SpikingDataLoader:
     def __init__(self, dataset, shuffle=False, batch_size=1, 
-                 sensor_size=None, dataset_slice=slice(0,None)):
+                 sensor_size=None, dataset_slice=slice(0,None), time_scale=1.0 / 1000.0):
         # Build list of dataset indices in our slice
         full_length = len(dataset)
         slice_indices = list(range(full_length)[dataset_slice])
@@ -158,6 +158,7 @@ class SpikingDataLoader:
         self.length = len(slice_indices)
         self.batch_size = batch_size
         self.shuffle = shuffle
+        self.time_scale = time_scale
 
         # Zero maximums
         self.max_stimuli_time = 0.0
@@ -235,7 +236,7 @@ class SpikingDataLoader:
         spike_times = events["t"][np.lexsort((events["t"], spike_event_ids))]
 
         # Return end spike indices and spike times (converted to floating point ms)
-        return PreprocessedEvents(end_spikes, spike_times / 1000.0)
+        return PreprocessedEvents(end_spikes, spike_times * self.time_scale)
 
 class LinearLatencyEncoder(object):
     def __init__(self, thresh, max_stimuli_time):

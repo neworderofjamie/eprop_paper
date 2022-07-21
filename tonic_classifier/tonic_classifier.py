@@ -86,6 +86,7 @@ if first_rank and not os.path.exists(output_directory):
     os.mkdir(output_directory)
 
 # Create dataset
+time_scale = 1.0 / 1000.0
 sensor_size = None
 encoder = None
 spiking = True
@@ -102,6 +103,7 @@ elif args.dataset == "dvs_gesture":
         tonic.transforms.Downsample(spatial_factor=0.25)])
     dataset = tonic.datasets.DVSGesture(save_to='./data', train=True, transform=transform)
     sensor_size = (32, 32, 2)
+    time_scale = 1.0
 elif args.dataset == "mnist":
     num_outputs = 10
     dataset = dataloader.get_mnist(True)
@@ -116,7 +118,8 @@ if spiking:
     num_outputs = len(dataset.classes)
     num_input_neurons = np.product(sensor_size) 
     data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=batch_size,
-                                               sensor_size=sensor_size, dataset_slice=dataset_slice)
+                                               sensor_size=sensor_size, dataset_slice=dataset_slice,
+                                               time_scale=1.0)
 else:
     assert encoder is not None
     num_input_neurons = np.product(dataset[0].shape[1:])
@@ -540,7 +543,7 @@ if args.num_recurrent_lif > 0:
         deep_r.append(DeepR(input_recurrent_lif_inh, input_recurrent_lif_inh_optimiser, num_input_neurons, args.num_recurrent_lif))
     
     recurrent_lif_output_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_output_reduction, "reducedGradient"),
-                                               "variable": genn_model.create_wu_var_ref(recurrent_lif_output)}
+                                               "variable": genn_model.create_wu_var_ref(recurrent_lif_output, "g")}
     recurrent_lif_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.adam_optimizer_model,
                                                              adam_params, adam_vars, recurrent_lif_output_optimiser_var_refs)
     optimisers.extend([recurrent_lif_output_optimiser, input_recurrent_lif_optimiser])
