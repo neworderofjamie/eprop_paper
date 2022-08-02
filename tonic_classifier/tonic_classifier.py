@@ -119,7 +119,7 @@ if spiking:
     num_input_neurons = np.product(sensor_size) 
     data_loader = dataloader.SpikingDataLoader(dataset, shuffle=True, batch_size=batch_size,
                                                sensor_size=sensor_size, dataset_slice=dataset_slice,
-                                               time_scale=1.0)
+                                               time_scale=time_scale)
 else:
     assert encoder is not None
     num_input_neurons = np.product(dataset[0].shape[1:])
