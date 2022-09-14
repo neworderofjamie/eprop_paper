@@ -209,35 +209,49 @@ if args.num_recurrent_lif > 0:
         input_recurrent_lif_inh_params = deepcopy(input_recurrent_lif_params)
         input_recurrent_lif_inh_params["NumExcitatory"] = 0
 
-# Recurrent->recurrent synapse parameters
-if not args.feedforward:
-    if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif_params = deepcopy(eprop_alif_params)
-        recurrent_alif_recurrent_alif_vars = {"eFiltered": 0.0, "epsilonA": 0.0, "DeltaG": 0.0}
-        if args.resume_epoch is None:
-            recurrent_alif_recurrent_alif_vars["g"] = genn_model.init_var(
-                eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal",
-                {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_alif)})
-        else:
-            assert not recurrent_recurrent_sparse
-            recurrent_alif_recurrent_alif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % args.resume_epoch))
 
+# Loop through hidden layers
+assert args.num_hidden > 0
+
+if not args.feedforward:
+    # Recurrent->recurrent synapse parameters    
+    if args.num_recurrent_alif > 0:
+        recurrent_alif_recurrent_alif_params = deepcopy(eprop_alif_params)        
         if recurrent_recurrent_deep_r:
             recurrent_alif_recurrent_alif_params["NumExcitatory"] = round(args.recurrent_excitatory_fraction * args.num_recurrent_alif)
-
     if args.num_recurrent_lif > 0:
         recurrent_lif_recurrent_lif_params = deepcopy(eprop_lif_params)
-        recurrent_lif_recurrent_lif_vars = {"eFiltered": 0.0, "DeltaG": 0.0}
-        if args.resume_epoch is None:
-            recurrent_lif_recurrent_lif_vars["g"] = genn_model.init_var(
-                eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal",
-                {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
-        else:
-            assert not recurrent_recurrent_sparse
-            recurrent_lif_recurrent_lif_vars["g"] = np.load(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % args.resume_epoch))
-
         if recurrent_recurrent_deep_r:
             recurrent_lif_recurrent_lif_params["NumExcitatory"] = round(args.recurrent_excitatory_fraction * args.num_recurrent_lif)
+    
+    # Recurrent->recurrent synapse variables
+    recurrent_alif_recurrent_alif_vars = []
+    recurrent_lif_recurrent_lif_vars = []
+    for i in range(args.num_hidden):
+        # Recurrent->recurrent synapse parameters    
+        if args.num_recurrent_alif > 0:
+            recurrent_alif_recurrent_alif_vars.append({"eFiltered": 0.0, "epsilonA": 0.0, "DeltaG": 0.0})
+            if args.resume_epoch is None:
+                recurrent_alif_recurrent_alif_vars[-1]["g"] = genn_model.init_var(
+                    eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal",
+                    {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_alif)})
+            else:
+                assert not recurrent_recurrent_sparse
+                name = (f"g_recurrent_recurrent_{args.resume_epoch}.npy" if i == 0
+                        else f"g_recurrent_{i}_recurrent_{i}_{args.resume_epoch}.npy")
+                recurrent_alif_recurrent_alif_vars[-1]["g"] = np.load(os.path.join(output_directory, name))
+
+        if args.num_recurrent_lif > 0:
+            recurrent_lif_recurrent_lif_vars.append({"eFiltered": 0.0, "DeltaG": 0.0})
+            if args.resume_epoch is None:
+                recurrent_lif_recurrent_lif_vars[-1]["g"] = genn_model.init_var(
+                    eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal",
+                    {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(args.num_recurrent_lif)})
+            else:
+                assert not recurrent_recurrent_sparse
+                name = (f"g_recurrent_lif_recurrent_lif_{args.resume_epoch}.npy" if i == 0
+                        else f"g_recurrent_lif_{i}_recurrent_lif_{i}_{args.resume_epoch}.npy")
+                recurrent_lif_recurrent_lif_vars[-1]["g"] = np.load(os.path.join(output_directory, name))
 
 # Recurrent->output synapse parameters
 recurrent_output_params = {"TauE": 20.0}
@@ -291,14 +305,19 @@ model._model.set_fuse_pre_post_weight_update_models(True)
 # Add neuron populations
 input = model.add_neuron_population("Input", num_input_neurons, "SpikeSourceArray",
                                     {}, {"startSpike": None, "endSpike": None})
-if args.num_recurrent_alif > 0:
-    recurrent_alif = model.add_neuron_population("RecurrentALIF", args.num_recurrent_alif, eprop.recurrent_alif_model,
-                                                 recurrent_alif_params, recurrent_alif_vars)
-    recurrent_alif.spike_recording_enabled = args.record
-if args.num_recurrent_lif > 0:
-    recurrent_lif = model.add_neuron_population("RecurrentLIF", args.num_recurrent_lif, eprop.recurrent_lif_model,
-                                                recurrent_lif_params, recurrent_lif_vars)
-    recurrent_lif.spike_recording_enabled = args.record
+
+# Loop through hidden layers
+recurrent_alif = []
+recurrent_lif = []
+for i in range(args.num_hidden):
+    if args.num_recurrent_alif > 0:
+        recurrent_alif.append(model.add_neuron_population(f"RecurrentALIF{i}", args.num_recurrent_alif, eprop.recurrent_alif_model,
+                                                          recurrent_alif_params, recurrent_alif_vars))
+        recurrent_alif[-1].spike_recording_enabled = args.record
+    if args.num_recurrent_lif > 0:
+        recurrent_lif.append(model.add_neuron_population(f"RecurrentLIF{i}", args.num_recurrent_lif, eprop.recurrent_lif_model,
+                                                         recurrent_lif_params, recurrent_lif_vars))
+        recurrent_lif[-1].spike_recording_enabled = args.record
 
 output = model.add_neuron_population("Output", num_output_neurons, output_neuron_models[num_output_neurons],
                                      output_params, output_vars)
@@ -330,7 +349,7 @@ else:
 if args.num_recurrent_alif > 0:
     input_recurrent_alif = model.add_synapse_population(
         "InputRecurrentALIF", input_recurrent_matrix_type, NO_DELAY,
-        input, recurrent_alif,
+        input, recurrent_alif[0],
         eprop.eprop_alif_deep_r_model if input_recurrent_deep_r else eprop.eprop_alif_model, 
         input_recurrent_alif_params, input_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
         "DeltaCurr", {}, {},
@@ -342,7 +361,7 @@ if args.num_recurrent_alif > 0:
     if input_recurrent_inh_deep_r:
         input_recurrent_alif_inh = model.add_synapse_population(
             "InputRecurrentALIFInh", input_recurrent_matrix_type, NO_DELAY,
-            input, recurrent_alif,
+            input, recurrent_alif[0],
             eprop.eprop_alif_deep_r_model if input_recurrent_deep_r else eprop.eprop_alif_model, 
             input_recurrent_alif_inh_params, input_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
             "DeltaCurr", {}, {},
@@ -350,7 +369,7 @@ if args.num_recurrent_alif > 0:
     
     recurrent_alif_output = model.add_synapse_population(
         "RecurrentALIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
-        recurrent_alif, output,
+        recurrent_alif[-1], output,
         eprop.output_learning_model, recurrent_output_params, recurrent_alif_output_vars, recurrent_output_pre_vars, {},
         "DeltaCurr", {}, {})
     recurrent_alif_output.pre_target_var = "ISynFeedback"
@@ -358,7 +377,7 @@ if args.num_recurrent_alif > 0:
 if args.num_recurrent_lif > 0:
     input_recurrent_lif = model.add_synapse_population(
         "InputRecurrentLIF", input_recurrent_matrix_type, NO_DELAY,
-        input, recurrent_lif,
+        input, recurrent_lif[0],
         eprop.eprop_lif_deep_r_model if input_recurrent_deep_r else eprop.eprop_lif_model,
         input_recurrent_lif_params, input_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
         "DeltaCurr", {}, {},
@@ -370,7 +389,7 @@ if args.num_recurrent_lif > 0:
     if input_recurrent_inh_deep_r:
         input_recurrent_lif_inh = model.add_synapse_population(
             "InputRecurrentLIFInh", input_recurrent_matrix_type, NO_DELAY,
-            input, recurrent_lif,
+            input, recurrent_lif[0],
             eprop.eprop_lif_deep_r_model if input_recurrent_deep_r else eprop.eprop_lif_model,
             input_recurrent_lif_inh_params, input_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
             "DeltaCurr", {}, {},
@@ -378,7 +397,7 @@ if args.num_recurrent_lif > 0:
 
     recurrent_lif_output = model.add_synapse_population(
         "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
-        recurrent_lif, output,
+        recurrent_lif[-1], output,
         eprop.output_learning_model, recurrent_output_params, recurrent_lif_output_vars, recurrent_output_pre_vars, {},
         "DeltaCurr", {}, {})
     recurrent_lif_output.pre_target_var = "ISynFeedback"
@@ -394,29 +413,32 @@ if not args.feedforward:
     else:
         recurrent_recurrent_sparse_init = None
         recurrent_recurrent_matrix_type = "DENSE_INDIVIDUALG"
-
+    
     if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif = model.add_synapse_population(
-            "RecurrentALIFRecurrentALIF", recurrent_recurrent_matrix_type, NO_DELAY,
-            recurrent_alif, recurrent_alif,
-            eprop.eprop_alif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_alif_model,
-            recurrent_alif_recurrent_alif_params, recurrent_alif_recurrent_alif_vars, eprop_pre_vars, eprop_post_vars,
-            "DeltaCurr", {}, {},
-            recurrent_recurrent_sparse_init)
+        recurrent_alif_recurrent_alif = []
+        for i, (pop, vars) in enumerate(zip(recurrent_alif, recurrent_alif_recurrent_alif_vars)):
+            recurrent_alif_recurrent_alif.append(model.add_synapse_population(
+                f"RecurrentALIF{i}RecurrentALIF{i}", recurrent_recurrent_matrix_type, NO_DELAY,
+                pop, pop,
+                eprop.eprop_alif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_alif_model,
+                recurrent_alif_recurrent_alif_params, vars, eprop_pre_vars, eprop_post_vars,
+                "DeltaCurr", {}, {},
+                recurrent_recurrent_sparse_init))
 
-        if args.recurrent_recurrent_max_row_length is not None:
-            recurrent_alif_recurrent_alif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
+            if args.recurrent_recurrent_max_row_length is not None:
+                recurrent_alif_recurrent_alif[-1].pop.set_max_connections(args.recurrent_recurrent_max_row_length)
     if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_lif = model.add_synapse_population(
-            "RecurrentLIFRecurrentLIF", recurrent_recurrent_matrix_type, NO_DELAY,
-            recurrent_lif, recurrent_lif,
-            eprop.eprop_lif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_lif_model,
-            recurrent_lif_recurrent_lif_params, recurrent_lif_recurrent_lif_vars, eprop_pre_vars, eprop_post_vars,
-            "DeltaCurr", {}, {},
-            recurrent_recurrent_sparse_init)
+        for i, (pop, vars) in enumerate(zip(recurrent_lif, recurrent_alif_recurrent_lif_vars)):
+            recurrent_lif_recurrent_lif.append(model.add_synapse_population(
+                f"RecurrentLIF{i}RecurrentLIF{i}", recurrent_recurrent_matrix_type, NO_DELAY,
+                pop, pop,
+                eprop.eprop_lif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_lif_model,
+                recurrent_lif_recurrent_lif_params, vars, eprop_pre_vars, eprop_post_vars,
+                "DeltaCurr", {}, {},
+                recurrent_recurrent_sparse_init))
 
-        if args.recurrent_recurrent_max_row_length is not None:
-            recurrent_lif_recurrent_lif.pop.set_max_connections(args.recurrent_recurrent_max_row_length)
+            if args.recurrent_recurrent_max_row_length is not None:
+                recurrent_lif_recurrent_lif[-1].pop.set_max_connections(args.recurrent_recurrent_max_row_length)
 
 # Add L1 optimisers to input->recurrent connectivity if deep-r is enabled on it
 # **NOTE** these could run after reduction BUT then strength would have to vary with batch size
@@ -445,14 +467,16 @@ if input_recurrent_deep_r and args.l1_regularizer_strength > 0.0:
 # **NOTE** these could run after reduction BUT then strength would have to vary with batch size
 if recurrent_recurrent_deep_r and not args.feedforward and args.l1_regularizer_strength > 0.0:
     if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif, "DeltaG")}
-        model.add_custom_update("recurrent_alif_recurrent_alif_l1", "L1", eprop.l1_model, 
-                                l1_params, {}, recurrent_alif_recurrent_alif_l1_var_refs)
-    
+        for i, pop in enumerate(recurrent_alif_recurrent_alif):
+            var_refs = {"variable": genn_model.create_wu_var_ref(pop, "DeltaG")}
+            model.add_custom_update(f"RecurrentALIF{i}RecurrentALIF{i}L1", "L1", eprop.l1_model, 
+                                    l1_params, {}, var_refs)
+        
     if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_alif_l1_var_refs = {"variable": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "DeltaG")}
-        model.add_custom_update("recurrent_lif_recurrent_lif_l1", "L1", eprop.l1_model, 
-                                l1_params, {}, recurrent_lif_recurrent_lif_l1_var_refs)
+        for i, pop in enumerate(recurrent_lif_recurrent_lif):
+            var_refs = {"variable": genn_model.create_wu_var_ref(pop, "DeltaG")}
+            model.add_custom_update(f"RecurrentLIF{i}RecurrentLIF{i}L1", "L1", eprop.l1_model, 
+                                    l1_params, {}, var_refs)
 
 # Add custom updates for reducing gradients across the batch
 if args.num_recurrent_alif > 0:
@@ -484,13 +508,19 @@ if args.num_recurrent_lif > 0:
 
 if not args.feedforward:
     if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif_reduction_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif, "DeltaG")}
-        recurrent_alif_recurrent_alif_reduction = model.add_custom_update("recurrent_alif_recurrent_alif_reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model,
-                                                                          {}, gradient_batch_reduce_vars, recurrent_alif_recurrent_alif_reduction_var_refs)
+        recurrent_alif_recurrent_alif_reduction = []
+        for i, pop in enumerate(recurrent_alif_recurrent_alif):
+            var_refs = {"gradient": genn_model.create_wu_var_ref(pop, "DeltaG")}
+            recurrent_alif_recurrent_alif_reduction.append(
+                model.add_custom_update(f"RecurrentALIF{i}RecurrentALIF{i}Reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model,
+                                        {}, gradient_batch_reduce_vars, var_refs))
     if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_lif_reduction_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "DeltaG")}
-        recurrent_lif_recurrent_lif_reduction = model.add_custom_update("recurrent_lif_recurrent_lif_reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model,
-                                                                          {}, gradient_batch_reduce_vars, recurrent_lif_recurrent_lif_reduction_var_refs)
+        recurrent_lif_recurrent_lif_reduction = []
+        for i, pop in enumerate(recurrent_lif_recurrent_lif):
+            var_refs = {"gradient": genn_model.create_wu_var_ref(pop, "DeltaG")}
+            recurrent_lif_recurrent_lif_reduction.append(
+                model.add_custom_update(f"RecurrentLIF{i}RecurrentLIF{i}Reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model,
+                                        {}, gradient_batch_reduce_vars, var_refs))
 
 output_bias_reduction_var_refs = {"gradient": genn_model.create_var_ref(output, "DeltaB")}
 output_bias_reduction = model.add_custom_update("output_bias_reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model, 
@@ -552,22 +582,24 @@ if args.num_recurrent_lif > 0:
 if not args.feedforward:
     recurrent_recurrent_optimizer_model = eprop.adam_optimizer_track_dormant_model if recurrent_recurrent_deep_r else eprop.adam_optimizer_model
     if args.num_recurrent_alif > 0:
-        recurrent_alif_recurrent_alif_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif_reduction, "reducedGradient"),
-                                                            "variable": genn_model.create_wu_var_ref(recurrent_alif_recurrent_alif, "g")}
-        recurrent_alif_recurrent_alif_optimiser = model.add_custom_update("recurrent_alif_recurrent_alif_optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
-                                                                          adam_params, adam_vars, recurrent_alif_recurrent_alif_optimiser_var_refs)
-        optimisers.append(recurrent_alif_recurrent_alif_optimiser)
-        if recurrent_recurrent_deep_r:
-            deep_r.append(DeepR(recurrent_alif_recurrent_alif, recurrent_alif_recurrent_alif_optimiser, args.num_recurrent_alif, args.num_recurrent_alif))
+        for i, (pop, reduction) in enumerate(zip(recurrent_alif_recurrent_alif, recurrent_alif_recurrent_alif_reduction)):
+            var_refs = {"gradient": genn_model.create_wu_var_ref(reduction, "reducedGradient"),
+                        "variable": genn_model.create_wu_var_ref(pop, "g")}
+            optimisers.append(
+                model.add_custom_update(f"RecurrentALIF{i}RecurrentALIF{i}Optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
+                                        adam_params, adam_vars, var_refs))
+            if recurrent_recurrent_deep_r:
+                deep_r.append(DeepR(pop, recurrent_alif_recurrent_alif_optimiser, args.num_recurrent_alif, args.num_recurrent_alif))
 
     if args.num_recurrent_lif > 0:
-        recurrent_lif_recurrent_lif_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif_reduction, "reducedGradient"),
-                                                          "variable": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "g")}
-        recurrent_lif_recurrent_lif_optimiser = model.add_custom_update("recurrent_lif_recurrent_alif_optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
-                                                                        adam_params, adam_vars, recurrent_lif_recurrent_lif_optimiser_var_refs)
-        optimisers.append(recurrent_lif_recurrent_lif_optimiser)
-        if recurrent_recurrent_deep_r:
-            deep_r.append(DeepR(recurrent_lif_recurrent_lif, recurrent_lif_recurrent_lif_optimiser, args.num_recurrent_lif, args.num_recurrent_lif))
+        for i, (pop, reduction) in enumerate(zip(recurrent_lif_recurrent_lif, recurrent_lif_recurrent_lif_reduction)):
+            var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif_reduction, "reducedGradient"),
+                                                              "variable": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "g")}
+            
+            optimisers.append(model.add_custom_update("recurrent_lif_recurrent_alif_optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
+                                                      adam_params, adam_vars, recurrent_lif_recurrent_lif_optimiser_var_refs))
+            if recurrent_recurrent_deep_r:
+                deep_r.append(DeepR(recurrent_lif_recurrent_lif, recurrent_lif_recurrent_lif_optimiser, args.num_recurrent_lif, args.num_recurrent_lif))
 
 output_bias_optimiser_var_refs = {"gradient": genn_model.create_var_ref(output_bias_reduction, "reducedGradient"),
                                   "variable": genn_model.create_var_ref(output, "B")}
@@ -616,11 +648,6 @@ output_labels_view = output.extra_global_params["labels"].view
 output_pi_view = output.vars["Pi"].view
 output_e_view = output.vars["E"].view
 output_b_view = output.vars["B"].view
-
-if args.reset_neurons:
-    assert args.num_recurrent_alif == 0
-    recurrent_lif_v_view = recurrent_lif.vars["V"].view
-    output_y_view = output.vars["Y"].view
 
 # Open file
 if first_rank:
@@ -731,11 +758,15 @@ for epoch in range(epoch_start, args.num_epochs):
             performance_file.flush()
     
         if args.reset_neurons:
-            recurrent_lif_v_view[:] = 0.0
-            output_y_view[:] = 0.0
-
-            recurrent_lif.push_var_to_device("V")
+            # **TODO** remove functionality
+            output.vars["Y"].view[:] = 0.0
             output.push_var_to_device("Y")
+            
+            assert args.num_recurrent_alif == 0
+            for r in zip(recurrent_lif):
+                r.vars["V"].view[:] = 0.0
+                r.push_var_to_device("V")
+            
 
         if args.record:
             # Download recording data
@@ -748,11 +779,17 @@ for epoch in range(epoch_start, args.num_epochs):
             for i, s in enumerate(input.spike_recording_data):
                 write_spike_file(os.path.join(output_directory, "input_spikes_%u_%u_%u.csv" % (epoch, batch_idx, rank_offset + i)), s)
             if args.num_recurrent_alif > 0:
-                for i, s in enumerate(recurrent_alif.spike_recording_data):
-                    write_spike_file(os.path.join(output_directory, "recurrent_spikes_%u_%u_%u.csv" % (epoch, batch_idx, rank_offset + i)), s)
+                for j, r in enumerate(recurrent_alif):
+                    for i, s in enumerate(r.spike_recording_data):
+                        name = (f"recurrent_spikes_{epoch}_{batch_idx}_{rank_offset + i}.csv" if j == 0
+                                else f"recurrent_{j}_spikes_{epoch}_{batch_idx}_{rank_offset + i}.csv")
+                        write_spike_file(os.path.join(output_directory, name), s)
             if args.num_recurrent_lif > 0:
-                for i, s in enumerate(recurrent_lif.spike_recording_data):
-                    write_spike_file(os.path.join(output_directory, "recurrent_lif_spikes_%u_%u_%u.csv" % (epoch, batch_idx, rank_offset + i)), s)
+                for j, r in enumerate(recurrent_lif):
+                    for i, s in enumerate(recurrent_lif.spike_recording_data):
+                        name = (f"recurrent_lif_spikes_{epoch}_{batch_idx}_{rank_offset + i}.csv" if j == 0
+                                else f"recurrent_lif_{j}_spikes_{epoch}_{batch_idx}_{rank_offset + i}.csv")
+                        write_spike_file(os.path.join(output_directory, name), s)
 
         batch_end_time = perf_counter()
         if first_rank:
@@ -800,22 +837,32 @@ for epoch in range(epoch_start, args.num_epochs):
 
         if not args.feedforward:
             if args.num_recurrent_alif > 0:
-                recurrent_alif_recurrent_alif.pull_var_from_device("g")
-                np.save(os.path.join(output_directory, "g_recurrent_recurrent_%u.npy" % epoch), recurrent_alif_recurrent_alif.get_var_values("g"))
+                for i, r in enumerate(recurrent_alif_recurrent_alif):
+                    r.pull_var_from_device("g")
+                    name = (f"g_recurrent_recurrent_{epoch}.npy" if i == 0
+                             else f"g_recurrent_{i}_recurrent_{i}_{epoch}.npy")
+                    np.save(os.path.join(output_directory, name), r.get_var_values("g"))
 
-                if recurrent_recurrent_sparse:
-                    recurrent_alif_recurrent_alif.pull_connectivity_from_device()
-                    np.save(os.path.join(output_directory, "ind_recurrent_recurrent_%u.npy" % epoch), 
-                            np.vstack((recurrent_alif_recurrent_alif.get_sparse_pre_inds(), recurrent_alif_recurrent_alif.get_sparse_post_inds())))
+                    if recurrent_recurrent_sparse:
+                        r.pull_connectivity_from_device()
+                        name = (f"ind_recurrent_{i}_recurrent_{i}_{epoch}.npy" if i == 0
+                             else f"ind_recurrent_recurrent_{epoch}.npy")
+                        np.save(os.path.join(output_directory, name), 
+                                np.vstack((r.get_sparse_pre_inds(), r.get_sparse_post_inds())))
 
             if args.num_recurrent_lif > 0:
-                recurrent_lif_recurrent_lif.pull_var_from_device("g")
-                np.save(os.path.join(output_directory, "g_recurrent_lif_recurrent_lif_%u.npy" % epoch), recurrent_lif_recurrent_lif.get_var_values("g"))
+                for i, r in enumerate(recurrent_lif_recurrent_lif):
+                    r.pull_var_from_device("g")
+                    name = (f"g_recurrent_lif_{i}_recurrent_lif_{i}_{epoch}.npy" if i == 0
+                             else f"g_recurrent_lif_recurrent_lif_{epoch}.npy")
+                    np.save(os.path.join(output_directory, name), r.get_var_values("g"))
 
-                if recurrent_recurrent_sparse:
-                    recurrent_lif_recurrent_lif.pull_connectivity_from_device()
-                    np.save(os.path.join(output_directory, "ind_recurrent_lif_recurrent_lif_%u.npy" % epoch), 
-                            np.vstack((recurrent_lif_recurrent_lif.get_sparse_pre_inds(), recurrent_lif_recurrent_lif.get_sparse_post_inds())))
+                    if recurrent_recurrent_sparse:
+                        r.pull_connectivity_from_device()
+                        name = (f"ind_recurrent_lif_{i}_recurrent_lif_{i}_{epoch}.npy" if i == 0
+                                else f"ind_recurrent_lif_recurrent_lif_{epoch}.npy")
+                        np.save(os.path.join(output_directory, name), 
+                                np.vstack((r.get_sparse_pre_inds(), r.get_sparse_post_inds())))
 
         output.pull_var_from_device("B")
         np.save(os.path.join(output_directory, "b_output_%u.npy" % epoch), output_b_view)

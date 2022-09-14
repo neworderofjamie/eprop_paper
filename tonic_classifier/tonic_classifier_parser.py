@@ -11,6 +11,7 @@ def parse_arguments(parent_parser=None, description=None):
     parser.add_argument("--deep-r", action="store_true")
     parser.add_argument("--num-recurrent-alif", type=int, default=256)
     parser.add_argument("--num-recurrent-lif", type=int, default=0)
+    parser.add_argument("--num-hidden", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--learning-rate-decay", type=float, default=1.0)
     parser.add_argument("--learning-rate-decay-epochs", type=int, default=0)
@@ -31,8 +32,9 @@ def parse_arguments(parent_parser=None, description=None):
     args = parser.parse_args()
 
     # Determine output directory name and create if it doesn't exist
-    name_suffix = "%u%s%s%s%s" % (args.num_recurrent_alif, 
+    name_suffix = "%u%s%s%s%s%s" % (args.num_recurrent_alif, 
                                   "_%u" % args.num_recurrent_lif if args.num_recurrent_lif > 0 else "",
+                                  "_%u" % args.num_hidden if args.num_hidden > 1 else "",
                                   "_feedforward" if args.feedforward else "", 
                                   "_%.1f" % args.dt if args.dt != 1.0 else "",
                                   args.suffix)
