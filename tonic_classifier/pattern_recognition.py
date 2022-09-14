@@ -197,12 +197,7 @@ recurrent_output = model.add_synapse_population(
     recurrent, output,
     eprop.output_learning_model, recurrent_output_params, recurrent_output_vars, recurrent_output_pre_vars, {},
     "DeltaCurr", {}, {})
-output_recurrent = model.add_synapse_population(
-    "OutputRecurrentLIF", "DENSE_INDIVIDUALG", NO_DELAY,
-    output, recurrent,
-    eprop.feedback_model, {}, {"g": 0.0}, {}, {},
-    "DeltaCurr", {}, {})
-output_recurrent.ps_target_var = "ISynFeedback"
+recurrent_output.pre_target_var = "ISynFeedback"
 
 recurrent_recurrent_sparse_init = (genn_model.init_connectivity("FixedProbability",
                                                                 {"prob": args.recurrent_recurrent_sparsity}) if sparse_recurrent_recurrent
@@ -216,15 +211,11 @@ recurrent_recurrent = model.add_synapse_population(
     "DeltaCurr", {}, {},
     recurrent_recurrent_sparse_init)
 
-# Add custom update for calculating initial tranpose weights
-model.add_custom_update("recurrent_hidden_transpose", "CalculateTranspose", "Transpose",
-                        {}, {}, {"variable": genn_model.create_wu_var_ref(recurrent_output, "g", output_recurrent, "g")})
-
 # Add custom updates for updating weights using Adam optimiser
 input_recurrent_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(input_recurrent, "DeltaG"),
                                       "variable": genn_model.create_wu_var_ref(input_recurrent, "g")}
 recurrent_output_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_output, "DeltaG"),
-                                       "variable": genn_model.create_wu_var_ref(recurrent_output, "g", output_recurrent, "g")}
+                                       "variable": genn_model.create_wu_var_ref(recurrent_output, "g")}
 recurrent_recurrent_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_recurrent, "DeltaG"),
                                           "variable": genn_model.create_wu_var_ref(recurrent_recurrent, "g")}
 
@@ -278,9 +269,6 @@ else:
 model.build()
 
 model.load(num_recording_timesteps=1000)
-
-# Calculate initial transpose feedback weights
-model.custom_update("CalculateTranspose")
 
 if input_recurrent_deep_r:
     input_recurrent_deep_r.load()
