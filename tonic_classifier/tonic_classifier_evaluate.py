@@ -133,8 +133,13 @@ elif args.dataset == "dvs_gesture":
     sensor_size = (32, 32, 2)
     time_scale = 1.0
 elif args.dataset == "mnist":
+    import mnist
+    
     num_outputs = 10
-    dataset = dataloader.get_mnist(args.hold_back_validate is not None)
+    if args.hold_back_validate is None:
+        dataset = (mnist.test_images(), mnist.test_labels())
+    else:
+        dataset = (mnist.train_images(), mnist.train_labels())
     encoder = dataloader.LogLatencyEncoder(args.log_latency_tau, args.log_latency_threshold, 100)
     spiking = False
 else:

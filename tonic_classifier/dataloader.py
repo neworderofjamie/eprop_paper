@@ -79,40 +79,6 @@ def batch_events(events, batch_size):
 
     return PreprocessedEvents(batch_end_spikes, batch_spike_times)
 
-
-def get_mnist(train):
-    images_file = "train-images-idx3-ubyte" if train else "t10k-images-idx3-ubyte"
-    labels_file = "train-labels-idx1-ubyte" if train else "t10k-labels-idx1-ubyte"
-
-    # Open images file
-    with open(path.join("mnist", images_file), "rb") as f:
-        image_data = f.read()
-
-        # Unpack header from first 16 bytes of buffer and verify
-        magic, num_items, num_rows, num_cols = unpack(">IIII", image_data[:16])
-        assert magic == 2051
-        assert num_rows == 28
-        assert num_cols == 28
-
-        # Convert remainder of buffer to numpy bytes
-        image_data = np.frombuffer(image_data[16:], dtype=np.uint8)
-
-        # Reshape data into individual (flattened) images
-        image_data = np.reshape(image_data, (num_items, 28 * 28))
-
-    # Open labels file
-    with open(path.join("mnist", labels_file), "rb") as f:
-        label_data = f.read()
-
-        # Unpack header from first 8 bytes of buffer and verify
-        magic, num_items = unpack(">II", label_data[:8])
-        assert magic == 2049
-
-        # Convert remainder of buffer to numpy bytes
-        label_data = np.frombuffer(label_data[8:], dtype=np.uint8)
-        assert label_data.shape == (image_data.shape[0],)
-    return image_data, label_data
-
 class DataIter:
     def __init__(self, data_loader):
         self.data_loader = data_loader

@@ -105,8 +105,10 @@ elif args.dataset == "dvs_gesture":
     sensor_size = (32, 32, 2)
     time_scale = 1.0
 elif args.dataset == "mnist":
+    import mnist
+
     num_outputs = 10
-    dataset = dataloader.get_mnist(True)
+    dataset = (mnist.train_images(), mnist.train_labels())
     encoder = dataloader.LogLatencyEncoder(args.log_latency_tau, args.log_latency_threshold, 100.0)
     spiking = False
 else:
@@ -428,7 +430,8 @@ if not args.feedforward:
             if args.recurrent_recurrent_max_row_length is not None:
                 recurrent_alif_recurrent_alif[-1].pop.set_max_connections(args.recurrent_recurrent_max_row_length)
     if args.num_recurrent_lif > 0:
-        for i, (pop, vars) in enumerate(zip(recurrent_lif, recurrent_alif_recurrent_lif_vars)):
+        recurrent_lif_recurrent_lif = []
+        for i, (pop, vars) in enumerate(zip(recurrent_lif, recurrent_lif_recurrent_lif_vars)):
             recurrent_lif_recurrent_lif.append(model.add_synapse_population(
                 f"RecurrentLIF{i}RecurrentLIF{i}", recurrent_recurrent_matrix_type, NO_DELAY,
                 pop, pop,
@@ -589,17 +592,17 @@ if not args.feedforward:
                 model.add_custom_update(f"RecurrentALIF{i}RecurrentALIF{i}Optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
                                         adam_params, adam_vars, var_refs))
             if recurrent_recurrent_deep_r:
-                deep_r.append(DeepR(pop, recurrent_alif_recurrent_alif_optimiser, args.num_recurrent_alif, args.num_recurrent_alif))
+                deep_r.append(DeepR(pop, optimisers[-1], args.num_recurrent_alif, args.num_recurrent_alif))
 
     if args.num_recurrent_lif > 0:
         for i, (pop, reduction) in enumerate(zip(recurrent_lif_recurrent_lif, recurrent_lif_recurrent_lif_reduction)):
-            var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif_reduction, "reducedGradient"),
-                                                              "variable": genn_model.create_wu_var_ref(recurrent_lif_recurrent_lif, "g")}
+            var_refs = {"gradient": genn_model.create_wu_var_ref(reduction, "reducedGradient"),
+                        "variable": genn_model.create_wu_var_ref(pop, "g")}
             
-            optimisers.append(model.add_custom_update("recurrent_lif_recurrent_alif_optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
-                                                      adam_params, adam_vars, recurrent_lif_recurrent_lif_optimiser_var_refs))
+            optimisers.append(model.add_custom_update(f"RecurrentLIF{i}RecurrentLIF{i}Optimiser", "GradientLearn", recurrent_recurrent_optimizer_model,
+                                                      adam_params, adam_vars, var_refs))
             if recurrent_recurrent_deep_r:
-                deep_r.append(DeepR(recurrent_lif_recurrent_lif, recurrent_lif_recurrent_lif_optimiser, args.num_recurrent_lif, args.num_recurrent_lif))
+                deep_r.append(DeepR(pop, optimisers[-1], args.num_recurrent_lif, args.num_recurrent_lif))
 
 output_bias_optimiser_var_refs = {"gradient": genn_model.create_var_ref(output_bias_reduction, "reducedGradient"),
                                   "variable": genn_model.create_var_ref(output, "B")}
