@@ -187,7 +187,11 @@ recurrent_lif_vars = {"V": 0.0, "RefracTime": 0.0}
 
 # Output population
 output_params = {"TauOut": 20.0}
-output_vars = {"Y": 0.0, "YSum": 0.0, "B": np.load(os.path.join(output_directory, "b_output_%u.npy" % args.trained_epoch))}
+
+if args.no_bias:
+    output_vars = {"Y": 0.0, "YSum": 0.0, "B": 0.0}
+else:
+    output_vars = {"Y": 0.0, "YSum": 0.0, "B": np.load(os.path.join(output_directory, "b_output_%u.npy" % args.trained_epoch))}
 
 # (For now) check that there aren't both LIF and ALIF recurrent neurons
 assert not (args.num_recurrent_alif > 0 and args.num_recurrent_lif > 0)

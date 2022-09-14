@@ -158,7 +158,7 @@ recurrent_lif_vars = {"V": 0.0, "RefracTime": 0.0, "E": 0.0}
 # Output population
 output_params = {"TauOut": 20.0, "TrialTime": data_loader.max_stimuli_time}
 output_vars = {"Y": 0.0, "Pi": 0.0, "E": 0.0, "DeltaB": 0.0}
-if args.resume_epoch is None:
+if args.resume_epoch is None or args.no_bias:
     output_vars["B"] = 0.0
 else:
     output_vars["B"] = np.load(os.path.join(output_directory, "b_output_%u.npy" % args.resume_epoch))
@@ -525,9 +525,10 @@ if not args.feedforward:
                 model.add_custom_update(f"RecurrentLIF{i}RecurrentLIF{i}Reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model,
                                         {}, gradient_batch_reduce_vars, var_refs))
 
-output_bias_reduction_var_refs = {"gradient": genn_model.create_var_ref(output, "DeltaB")}
-output_bias_reduction = model.add_custom_update("output_bias_reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model, 
-                                                {}, gradient_batch_reduce_vars, output_bias_reduction_var_refs)
+if not args.no_bias:
+    output_bias_reduction_var_refs = {"gradient": genn_model.create_var_ref(output, "DeltaB")}
+    output_bias_reduction = model.add_custom_update("output_bias_reduction", "GradientBatchReduce", eprop.gradient_batch_reduce_model, 
+                                                    {}, gradient_batch_reduce_vars, output_bias_reduction_var_refs)
 
 # Add custom updates for updating reduced weights using Adam optimiser
 optimisers = []
@@ -604,11 +605,12 @@ if not args.feedforward:
             if recurrent_recurrent_deep_r:
                 deep_r.append(DeepR(pop, optimisers[-1], args.num_recurrent_lif, args.num_recurrent_lif))
 
-output_bias_optimiser_var_refs = {"gradient": genn_model.create_var_ref(output_bias_reduction, "reducedGradient"),
-                                  "variable": genn_model.create_var_ref(output, "B")}
-output_bias_optimiser = model.add_custom_update("output_bias_optimiser", "GradientLearn", eprop.adam_optimizer_model,
-                                                adam_params, adam_vars, output_bias_optimiser_var_refs)
-optimisers.append(output_bias_optimiser)
+if not args.no_bias:
+    output_bias_optimiser_var_refs = {"gradient": genn_model.create_var_ref(output_bias_reduction, "reducedGradient"),
+                                      "variable": genn_model.create_var_ref(output, "B")}
+    output_bias_optimiser = model.add_custom_update("output_bias_optimiser", "GradientLearn", eprop.adam_optimizer_model,
+                                                    adam_params, adam_vars, output_bias_optimiser_var_refs)
+    optimisers.append(output_bias_optimiser)
 
 # Build and load model
 stimuli_timesteps = int(np.ceil(data_loader.max_stimuli_time / args.dt))
@@ -866,9 +868,10 @@ for epoch in range(epoch_start, args.num_epochs):
                                 else f"ind_recurrent_lif_recurrent_lif_{epoch}.npy")
                         np.save(os.path.join(output_directory, name), 
                                 np.vstack((r.get_sparse_pre_inds(), r.get_sparse_post_inds())))
-
-        output.pull_var_from_device("B")
-        np.save(os.path.join(output_directory, "b_output_%u.npy" % epoch), output_b_view)
+        
+        if not args.no_bias:
+            output.pull_var_from_device("B")
+            np.save(os.path.join(output_directory, "b_output_%u.npy" % epoch), output_b_view)
 
 end_time = perf_counter()
 if first_rank:

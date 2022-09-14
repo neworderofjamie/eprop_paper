@@ -8,6 +8,7 @@ def parse_arguments(parent_parser=None, description=None):
         parser = ArgumentParser(description=description, parents=[parent_parser])
     parser.add_argument("--dt", type=float, default=1.0)
     parser.add_argument("--feedforward", action="store_true")
+    parser.add_argument("--no-bias", action="store_true")
     parser.add_argument("--deep-r", action="store_true")
     parser.add_argument("--num-recurrent-alif", type=int, default=256)
     parser.add_argument("--num-recurrent-lif", type=int, default=0)
@@ -32,10 +33,11 @@ def parse_arguments(parent_parser=None, description=None):
     args = parser.parse_args()
 
     # Determine output directory name and create if it doesn't exist
-    name_suffix = "%u%s%s%s%s%s" % (args.num_recurrent_alif, 
+    name_suffix = "%u%s%s%s%s%s%s" % (args.num_recurrent_alif, 
                                   "_%u" % args.num_recurrent_lif if args.num_recurrent_lif > 0 else "",
                                   "_%u" % args.num_hidden if args.num_hidden > 1 else "",
                                   "_feedforward" if args.feedforward else "", 
+                                  "_no_bias" if args.no_bias else "", 
                                   "_%.1f" % args.dt if args.dt != 1.0 else "",
                                   args.suffix)
     output_directory = "%s_%s" % (args.dataset, name_suffix)
