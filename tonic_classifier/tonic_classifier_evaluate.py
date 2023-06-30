@@ -119,6 +119,10 @@ num_outputs = None
 num_input_neurons = None
 time_scale = 1.0 / 1000.0
 if args.dataset == "shd":
+    transformations = []
+    if args.crop_time:
+        transformations.append(tonic.transforms.CropTime(max=args.crop_time * 1000.0))
+    transformations.append(dataloader.EventsToGrid(tonic.datasets.SHD.sensor_size, args.dt * 1000))
     dataset = tonic.datasets.SHD(save_to='./data', train=args.hold_back_validate is not None)
     sensor_size = dataset.sensor_size
 elif args.dataset == "smnist":
@@ -145,6 +149,7 @@ elif args.dataset == "mnist":
 else:
     raise RuntimeError("Unknown dataset '%s'" % args.dataset)
 
+
 # If we're using held back training set data, only use this part of dataset
 dataset_slice = slice(None) if args.hold_back_validate is None else slice(-args.hold_back_validate, None)
 
@@ -161,6 +166,7 @@ else:
     num_input_neurons = np.product(dataset[0].shape[1:])
     data_loader = dataloader.ImageDataLoader(dataset, shuffle=True, batch_size=args.batch_size,
                                              encoder=encoder, dataset_slice=dataset_slice)
+data_loader.max_stimuli_time = 1000.0
 
 end_process_time = perf_counter()
 print("Data processing time:%f ms" % ((end_process_time - start_processing_time) * 1000.0))

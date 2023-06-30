@@ -2,10 +2,46 @@ import numpy as np
 
 from collections import namedtuple
 from copy import copy
+from dataclasses import dataclass
 from os import path
 from struct import unpack
-
+from typing import Tuple
 PreprocessedEvents = namedtuple("PreprocessedEvents", ["end_spikes", "spike_times"])
+
+@dataclass
+class EventsToGrid:
+    sensor_size: Tuple[int, int, int]
+    dt: float
+
+    def __call__(self, events):
+        # Tuple of possible axis names
+        axes = ("x", "y", "p")
+
+        # Build bin and sample data structures for histogramdd
+        bins = []
+        sample = []
+        for s, a in zip(self.sensor_size, axes):
+            if a in events.dtype.names:
+                bins.append(np.linspace(0, s, s + 1))
+                sample.append(events[a])
+
+        # Add time bins
+        bins.append(np.arange(0.0, np.amax(events["t"]) + self.dt, self.dt))
+        sample.append(events["t"])
+
+        # Build histogram
+        event_hist,_ = np.histogramdd(tuple(sample), tuple(bins))
+        new_events = np.where(event_hist > 0)
+
+        # Copy x, y, p data into new structured array
+        grid_events = np.empty(len(new_events[0]), dtype=events.dtype)
+        for i, a in enumerate(axes):
+            if a in grid_events.dtype.names:
+                grid_events[a] = new_events[i]
+
+        # Add t, scaling by dt
+        grid_events["t"] = new_events[-1] * self.dt
+        return grid_events
 
 def get_start_spikes(end_spikes):
     start_spikes = np.empty_like(end_spikes)

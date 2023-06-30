@@ -93,7 +93,13 @@ spiking = True
 num_outputs = None
 num_input_neurons = None
 if args.dataset == "shd":
-    dataset = tonic.datasets.SHD(save_to='./data', train=True)
+    transformations = []
+    if args.crop_time:
+        transformations.append(tonic.transforms.CropTime(max=args.crop_time * 1000.0))
+    transformations.append(dataloader.EventsToGrid(tonic.datasets.SHD.sensor_size, args.dt * 1000.0))
+
+    dataset = tonic.datasets.SHD(save_to='./data', train=True,
+                                 transform=tonic.transforms.Compose(transformations))
     sensor_size = dataset.sensor_size
 elif args.dataset == "smnist":
     dataset = tonic.datasets.SMNIST(save_to='./data', train=True, duplicate=False, num_neurons=79)
