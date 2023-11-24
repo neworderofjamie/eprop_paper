@@ -1,12 +1,13 @@
 import numpy as np
 
-from pygenn import create_custom_update_model, create_neuron_model, create_weight_update_model
-from pygenn import VarAccess, VarAccessMode
+from pygenn import (create_custom_update_model, create_neuron_model,
+                    create_var_init_snippet, create_weight_update_model)
+from pygenn import CustomUpdateVarAccess, VarAccess, VarAccessMode
 
 # ----------------------------------------------------------------------------
 # Var init snippets
 # ----------------------------------------------------------------------------
-absolute_normal_snippet = create_custom_update_model(
+absolute_normal_snippet = create_var_init_snippet(
     "absolute_normal",
     params=["mean", "sd"],
     var_init_code="""
@@ -144,7 +145,7 @@ gradient_descent_zero_gradient_track_dormant_model = create_custom_update_model(
 
 gradient_batch_reduce_model = create_custom_update_model(
     "gradient_batch_reduce",
-    var_name_types=[("reducedGradient", "scalar", VarAccess.REDUCE_BATCH_SUM)],
+    var_name_types=[("reducedGradient", "scalar", CustomUpdateVarAccess.REDUCE_BATCH_SUM)],
     var_refs=[("gradient", "scalar")],
     update_code="""
     reducedGradient = gradient;

@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 
 from argparse import ArgumentParser
 from time import perf_counter
-from pygenn import genn_model
-from pygenn.genn_wrapper import NO_DELAY
-from pygenn.genn_wrapper.Models import VarAccess_READ_ONLY
+from pygenn import GeNNModel, VarAccess
+from pygenn import (create_neuron_model, create_wu_var_ref,
+                    init_sparse_connectivity, init_postsynaptic,
+                    init_var, init_weight_update)
 
 # Eprop imports
 import eprop
@@ -41,45 +42,45 @@ recurrent_recurrent_deep_r = args.deep_r and sparse_recurrent_recurrent
 #----------------------------------------------------------------------------
 # Neuron models
 #----------------------------------------------------------------------------
-input_model = genn_model.create_custom_neuron_class(
+input_model = create_neuron_model(
     "input",
-    param_names=["GroupSize", "ActiveInterval", "ActiveRate"],
+    param_names=[("GroupSize", "unsigned int"), "ActiveInterval", "ActiveRate"],
     var_name_types=[("RefracTime", "scalar")],
-    derived_params=[("TauRefrac", genn_model.create_dpf_class(lambda pars, dt: 1000.0 / pars[2])())],
+    derived_params=[("TauRefrac", lambda pars, dt: 1000.0 / pars["ActiveRate"])],
 
     sim_code="""
-    const unsigned int neuronGroup = $(id) / (unsigned int)$(GroupSize);
-    const scalar groupStartTime = neuronGroup * $(ActiveInterval);
-    const scalar groupEndTime = groupStartTime + $(ActiveInterval);
-    if ($(RefracTime) > 0.0) {
-      $(RefracTime) -= DT;
+    const unsigned int neuronGroup = id / GroupSize;
+    const scalar groupStartTime = neuronGroup * ActiveInterval;
+    const scalar groupEndTime = groupStartTime + ActiveInterval;
+    if (RefracTime > 0.0) {
+      RefracTime -= DT;
     }
     """,
     reset_code="""
-    $(RefracTime) = $(TauRefrac);
+    RefracTime = TauRefrac;
     """,
     threshold_condition_code="""
-    $(t) > groupStartTime && $(t) < groupEndTime && $(RefracTime) <= 0.0
+    t > groupStartTime && t < groupEndTime && RefracTime <= 0.0
     """,
     is_auto_refractory_required=False)
 
-output_model = genn_model.create_custom_neuron_class(
+output_model = create_neuron_model(
     "output",
     param_names=["TauOut", "Bias", "Freq1", "Freq2", "Freq3"],
     var_name_types=[("Y", "scalar"), ("YStar", "scalar"), ("E", "scalar"),
-                    ("Ampl1", "scalar", VarAccess_READ_ONLY), ("Ampl2", "scalar", VarAccess_READ_ONLY), ("Ampl3", "scalar", VarAccess_READ_ONLY),
-                    ("Phase1", "scalar", VarAccess_READ_ONLY), ("Phase2", "scalar", VarAccess_READ_ONLY), ("Phase3", "scalar", VarAccess_READ_ONLY)],
-    derived_params=[("Kappa", genn_model.create_dpf_class(lambda pars, dt: np.exp(-dt / pars[0]))()),
-                    ("Freq1Radians", genn_model.create_dpf_class(lambda pars, dt: pars[2] * 2.0 * np.pi / 1000.0)()),
-                    ("Freq2Radians", genn_model.create_dpf_class(lambda pars, dt: pars[3] * 2.0 * np.pi / 1000.0)()),
-                    ("Freq3Radians", genn_model.create_dpf_class(lambda pars, dt: pars[4] * 2.0 * np.pi / 1000.0)())],
+                    ("Ampl1", "scalar", VarAccess.READ_ONLY), ("Ampl2", "scalar", VarAccess.READ_ONLY), ("Ampl3", "scalar", VarAccess.READ_ONLY),
+                    ("Phase1", "scalar", VarAccess.READ_ONLY), ("Phase2", "scalar", VarAccess.READ_ONLY), ("Phase3", "scalar", VarAccess.READ_ONLY)],
+    derived_params=[("Kappa", lambda pars, dt: np.exp(-dt / pars["TauOut"])),
+                    ("Freq1Radians", lambda pars, dt: pars["Freq1"] * 2.0 * np.pi / 1000.0),
+                    ("Freq2Radians", lambda pars, dt: pars["Freq2"] * 2.0 * np.pi / 1000.0),
+                    ("Freq3Radians", lambda pars, dt: pars["Freq3"] * 2.0 * np.pi / 1000.0)],
 
     sim_code="""
-    $(Y) = ($(Kappa) * $(Y)) + $(Isyn) + $(Bias);
-    $(YStar) = $(Ampl1) * sin(($(Freq1Radians) * $(t)) + $(Phase1));
-    $(YStar) += $(Ampl2) * sin(($(Freq2Radians) * $(t)) + $(Phase2));
-    $(YStar) += $(Ampl3) * sin(($(Freq3Radians) * $(t)) + $(Phase3));
-    $(E) = $(Y) - $(YStar);
+    Y = (Kappa * Y) + Isyn + Bias;
+    YStar = Ampl1 * sin((Freq1Radians * t) + Phase1);
+    YStar += Ampl2 * sin((Freq2Radians * t) + Phase2);
+    YStar += Ampl3 * sin((Freq3Radians * t) + Phase3);
+    E = Y - YStar;
     """,
 
     is_auto_refractory_required=False)
@@ -94,14 +95,14 @@ def update_adam(learning_rate, adam_step, optimiser_custom_updates):
 
     # Loop through optimisers and set
     for o in optimiser_custom_updates:
-        o.extra_global_params["alpha"].view[:] = learning_rate
-        o.extra_global_params["firstMomentScale"].view[:] = first_moment_scale
-        o.extra_global_params["secondMomentScale"].view[:] = second_moment_scale
+        o.set_dynamic_param_value("alpha", learning_rate)
+        o.set_dynamic_param_value("firstMomentScale", first_moment_scale)
+        o.set_dynamic_param_value("secondMomentScale", second_moment_scale)
 
 def update_learning_rate(learning_rate, optimiser_custom_updates):
     # Loop through optimisers and set
     for o in optimiser_custom_updates:
-        o.extra_global_params["eta"].view[:] = learning_rate
+        o.set_dynamic_param_value("eta", learning_rate)
 
 # ----------------------------------------------------------------------------
 # Neuron initialisation
@@ -115,8 +116,8 @@ recurrent_params = {"TauM": 20.0, "Vthresh": 0.61, "TauRefrac": 5.0}
 recurrent_vars = {"V": 0.0, "RefracTime": 0.0, "E": 0.0}
 
 # Output population
-output_ampl_init = genn_model.init_var("Uniform", {"min": 0.5, "max": 2.0})
-output_phase_init = genn_model.init_var("Uniform", {"min": 0.0, "max": 2.0 * np.pi})
+output_ampl_init = init_var("Uniform", {"min": 0.5, "max": 2.0})
+output_phase_init = init_var("Uniform", {"min": 0.0, "max": 2.0 * np.pi})
 output_params = {"TauOut": 20.0, "Bias": 0.0,
                  "Freq1": 2.0, "Freq2": 3.0, "Freq3": 5.0}
 output_vars = {"Y": 0.0, "YStar": 0.0, "E": 0.0,
@@ -128,21 +129,21 @@ output_vars = {"Y": 0.0, "YStar": 0.0, "E": 0.0,
 # ----------------------------------------------------------------------------
 # eProp parameters common across all populations
 eprop_lif_params = {"TauE": 20.0, "CReg": 3.0, "FTarget": 10.0,
-                    "TauFAvg": 500.0}
+                    "TauFAvg": 500.0, "Vthresh": 0.61}
 eprop_deep_r_lif_params = {"TauE": 20.0, "CReg": 3.0, "FTarget": 10.0,
-                           "TauFAvg": 500.0, "CL1": C_L1}
+                           "TauFAvg": 500.0, "Vthresh": 0.61, "CL1": C_L1}
 eprop_pre_vars = {"ZFilter": 0.0}
 eprop_post_vars = {"Psi": 0.0, "FAvg": 0.0}
 
 # Input->recurrent synapse parameters
-input_recurrent_g = genn_model.init_var(eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal", 
-                                        {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_INPUT)})
+input_recurrent_g = init_var(eprop.absolute_normal_snippet if input_recurrent_deep_r else "Normal",
+                             {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_INPUT)})
 input_recurrent_vars = {"eFiltered": 0.0, "DeltaG": 0.0,
                         "g": input_recurrent_g}
 
 # Recurrent->recurrent synapse parameters
-recurrent_recurrent_g = genn_model.init_var(eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal", 
-                                            {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_RECURRENT)})
+recurrent_recurrent_g = init_var(eprop.absolute_normal_snippet if recurrent_recurrent_deep_r else "Normal",
+                                 {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_RECURRENT)})
 recurrent_recurrent_vars = {"eFiltered": 0.0, "DeltaG": 0.0,
                             "g": recurrent_recurrent_g}
 
@@ -150,7 +151,7 @@ recurrent_recurrent_vars = {"eFiltered": 0.0, "DeltaG": 0.0,
 recurrent_output_params = {"TauE": 20.0}
 recurrent_output_pre_vars = {"ZFilter": 0.0}
 recurrent_output_vars = {"DeltaG": 0.0,
-                         "g": genn_model.init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_RECURRENT)})}
+                         "g": init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_RECURRENT)})}
 
 # Optimiser initialisation
 adam_params = {"beta1": ADAM_BETA1, "beta2": ADAM_BETA2, "epsilon": 1E-8}
@@ -159,11 +160,11 @@ adam_vars = {"m": 0.0, "v": 0.0}
 # ----------------------------------------------------------------------------
 # Model description
 # ----------------------------------------------------------------------------
-model = genn_model.GeNNModel("float", "pattern_recognition")
-model.dT = 1.0
+model = GeNNModel("float", "pattern_recognition")
+model.dt = 1.0
 model.timing_enabled = True
-model._model.set_fuse_postsynaptic_models(True)
-model._model.set_fuse_pre_post_weight_update_models(True)
+model.fuse_postsynaptic_models = True
+model.fuse_pre_post_weight_update_models = True
 
 # Add neuron populations
 input = model.add_neuron_population("Input", NUM_INPUT, input_model,
@@ -180,52 +181,56 @@ input.spike_recording_enabled = True
 recurrent.spike_recording_enabled = True
 
 # Add synapse populations
-input_recurrent_sparse_init = (genn_model.init_connectivity("FixedProbability", 
-                                                            {"prob": args.input_recurrent_sparsity}) if sparse_input_recurrent
+input_recurrent_sparse_init = (init_sparse_connectivity("FixedProbability",
+                                                        {"prob": args.input_recurrent_sparsity}) if sparse_input_recurrent
                                else None)
 input_recurrent = model.add_synapse_population(
-    "InputRecurrentLIF", "SPARSE_INDIVIDUALG" if sparse_input_recurrent else "DENSE_INDIVIDUALG", NO_DELAY,
+    "InputRecurrentLIF", "SPARSE" if sparse_input_recurrent else "DENSE", 0,
     input, recurrent,
-    eprop.eprop_lif_deep_r_model if input_recurrent_deep_r else eprop.eprop_lif_model, 
-    eprop_deep_r_lif_params if input_recurrent_deep_r else eprop_lif_params,
-    input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
-    "DeltaCurr", {}, {},
+    init_weight_update(eprop.eprop_lif_deep_r_model if input_recurrent_deep_r else eprop.eprop_lif_model,
+                       eprop_deep_r_lif_params if input_recurrent_deep_r else eprop_lif_params,
+                       input_recurrent_vars, eprop_pre_vars, eprop_post_vars),
+    init_postsynaptic("DeltaCurr"),
     input_recurrent_sparse_init)
 
 recurrent_output = model.add_synapse_population(
-    "RecurrentLIFOutput", "DENSE_INDIVIDUALG", NO_DELAY,
+    "RecurrentLIFOutput", "DENSE", 0,
     recurrent, output,
-    eprop.output_learning_model, recurrent_output_params, recurrent_output_vars, recurrent_output_pre_vars, {},
-    "DeltaCurr", {}, {})
+    init_weight_update(eprop.output_learning_model, recurrent_output_params, recurrent_output_vars, recurrent_output_pre_vars),
+    init_postsynaptic("DeltaCurr"))
 recurrent_output.pre_target_var = "ISynFeedback"
 
-recurrent_recurrent_sparse_init = (genn_model.init_connectivity("FixedProbability",
-                                                                {"prob": args.recurrent_recurrent_sparsity}) if sparse_recurrent_recurrent
+recurrent_recurrent_sparse_init = (init_sparse_connectivity("FixedProbability",
+                                                            {"prob": args.recurrent_recurrent_sparsity}) if sparse_recurrent_recurrent
                                    else None)
 recurrent_recurrent = model.add_synapse_population(
-    "RecurrentLIFRecurrentLIF", "SPARSE_INDIVIDUALG" if sparse_recurrent_recurrent else "DENSE_INDIVIDUALG", NO_DELAY,
+    "RecurrentLIFRecurrentLIF", "SPARSE" if sparse_recurrent_recurrent else "DENSE", NO_DELAY,
     recurrent, recurrent,
-    eprop.eprop_lif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_lif_model, 
-    eprop_deep_r_lif_params if recurrent_recurrent_deep_r else eprop_lif_params,
-    recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
-    "DeltaCurr", {}, {},
+    init_weight_update(eprop.eprop_lif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_lif_model,
+                       eprop_deep_r_lif_params if recurrent_recurrent_deep_r else eprop_lif_params,
+                       recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars),
+    init_postsynaptic("DeltaCurr"),
     recurrent_recurrent_sparse_init)
 
 # Add custom updates for updating weights using Adam optimiser
-input_recurrent_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(input_recurrent, "DeltaG"),
-                                      "variable": genn_model.create_wu_var_ref(input_recurrent, "g")}
-recurrent_output_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_output, "DeltaG"),
-                                       "variable": genn_model.create_wu_var_ref(recurrent_output, "g")}
-recurrent_recurrent_optimiser_var_refs = {"gradient": genn_model.create_wu_var_ref(recurrent_recurrent, "DeltaG"),
-                                          "variable": genn_model.create_wu_var_ref(recurrent_recurrent, "g")}
+input_recurrent_optimiser_var_refs = {"gradient": create_wu_var_ref(input_recurrent, "DeltaG"),
+                                      "variable": create_wu_var_ref(input_recurrent, "g")}
+recurrent_output_optimiser_var_refs = {"gradient": create_wu_var_ref(recurrent_output, "DeltaG"),
+                                       "variable": create_wu_var_ref(recurrent_output, "g")}
+recurrent_recurrent_optimiser_var_refs = {"gradient": create_wu_var_ref(recurrent_recurrent, "DeltaG"),
+                                          "variable": create_wu_var_ref(recurrent_recurrent, "g")}
 
 
 if args.adam:
     recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
                                                          adam_params, adam_vars, recurrent_output_optimiser_var_refs)
+    recurrent_output_optimiser.set_param_dynamic("alpha")
+    recurrent_output_optimiser.set_param_dynamic("firstMomentScale")
+    recurrent_output_optimiser.set_param_dynamic("secondMomentScale")
 else:
     recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
                                                          {}, {}, recurrent_output_optimiser_var_refs)
+    recurrent_output_optimiser.set_param_dynamic("eta")
 
 
 # If we're using Deep-R on input-recurrent connectivity
@@ -233,36 +238,52 @@ if input_recurrent_deep_r:
     if args.adam:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_track_dormant_model,
                                                             adam_params, adam_vars, input_recurrent_optimiser_var_refs)
+        input_recurrent_optimiser.set_param_dynamic("alpha")
+        input_recurrent_optimiser.set_param_dynamic("firstMomentScale")
+        input_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                             {}, {}, input_recurrent_optimiser_var_refs)
+        input_recurrent_optimiser.set_param_dynamic("eta")
 
     input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, NUM_INPUT, NUM_RECURRENT)
 else:
     if args.adam:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
                                                             adam_params, adam_vars, input_recurrent_optimiser_var_refs)
+        input_recurrent_optimiser.set_param_dynamic("alpha")
+        input_recurrent_optimiser.set_param_dynamic("firstMomentScale")
+        input_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
                                                             {}, {}, input_recurrent_optimiser_var_refs)
+        input_recurrent_optimiser.set_param_dynamic("eta")
 
 # If we're using Deep-R on recurrent-recurrent connectivity
 if recurrent_recurrent_deep_r:
     if args.adam:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_track_dormant_model,
                                                                 adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
+        recurrent_recurrent_optimiser.set_param_dynamic("alpha")
+        recurrent_recurrent_optimiser.set_param_dynamic("firstMomentScale")
+        recurrent_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
                                                                 {}, {}, recurrent_recurrent_optimiser_var_refs)
+        recurrent_recurrent_optimiser.set_param_dynamic("eta")
     
     recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, NUM_RECURRENT, NUM_RECURRENT)
 else:
     if args.adam:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.adam_optimizer_zero_gradient_model,
                                                                 adam_params, adam_vars, recurrent_recurrent_optimiser_var_refs)
+        recurrent_recurrent_optimiser.set_param_dynamic("alpha")
+        recurrent_recurrent_optimiser.set_param_dynamic("firstMomentScale")
+        recurrent_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
                                                                 {}, {}, recurrent_recurrent_optimiser_var_refs)
+        recurrent_recurrent_optimiser.set_param_dynamic("eta")
     
 
 # Build model
@@ -276,8 +297,8 @@ if recurrent_recurrent_deep_r:
     recurrent_recurrent_deep_r.load()
     
 # Loop through trials
-output_y_view = output.vars["Y"].view
-output_y_star_view = output.vars["YStar"].view
+output_y_var = output.vars["Y"]
+output_y_star_var = output.vars["YStar"]
 learning_rate = 0.003 if args.adam else 1E-5
 adam_step = 1
 input_spikes = []
@@ -297,7 +318,6 @@ for trial in range(1000):
 
     # Reset time
     model.timestep = 0
-    model.t = 0.0
 
     trial_output_y =[]
     trial_output_y_star = []
@@ -305,11 +325,11 @@ for trial in range(1000):
         model.step_time()
 
         if record_trial:
-            output.pull_var_from_device("Y")
-            output.pull_var_from_device("YStar")
+            output_y_var.pull_from_device()
+            output_y_star_var.pull_var_from_device()
 
-            trial_output_y.append(np.copy(output_y_view))
-            trial_output_y_star.append(np.copy(output_y_star_view))
+            trial_output_y.append(np.copy(output_y_var.view))
+            trial_output_y_star.append(np.copy(output_y_star_var.view))
 
     if record_trial:
         output_y.append(np.vstack(trial_output_y))
@@ -317,8 +337,8 @@ for trial in range(1000):
 
         model.pull_recording_buffers_from_device()
 
-        input_spikes.append(input.spike_recording_data)
-        recurrent_spikes.append(recurrent.spike_recording_data)
+        input_spikes.append(input.spike_recording_data[0])
+        recurrent_spikes.append(recurrent.spike_recording_data[0])
     
     if args.adam:
         # Update Adam optimiser scaling factors
