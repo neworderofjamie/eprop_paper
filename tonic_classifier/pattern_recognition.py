@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 from time import perf_counter
 from pygenn import GeNNModel, VarAccess
-from pygenn import (create_neuron_model, create_wu_var_ref,
+from pygenn import (create_neuron_model, create_var_ref, create_wu_var_ref,
                     init_sparse_connectivity, init_postsynaptic,
                     init_var, init_weight_update)
 
@@ -154,8 +154,12 @@ recurrent_output_vars = {"DeltaG": 0.0,
                          "g": init_var("Normal", {"mean": 0.0, "sd": WEIGHT_0 / np.sqrt(NUM_RECURRENT)})}
 
 # Optimiser initialisation
-adam_params = {"beta1": ADAM_BETA1, "beta2": ADAM_BETA2, "epsilon": 1E-8}
+adam_params = {"beta1": ADAM_BETA1, "beta2": ADAM_BETA2, "epsilon": 1E-8,
+               "alpha": 0.003, "firstMomentScale": 1.0 / (1.0 - ADAM_BETA1),
+               "secondMomentScale": 1.0 / (1.0 - ADAM_BETA2)}
 adam_vars = {"m": 0.0, "v": 0.0}
+
+sgd_params = {"eta": 1E-5}
 
 # ----------------------------------------------------------------------------
 # Model description
@@ -184,31 +188,41 @@ recurrent.spike_recording_enabled = True
 input_recurrent_sparse_init = (init_sparse_connectivity("FixedProbability",
                                                         {"prob": args.input_recurrent_sparsity}) if sparse_input_recurrent
                                else None)
+input_recurrent_post_var_refs = {"RefracTime_post": create_var_ref(recurrent, "RefracTime"),
+                                 "V_post": create_var_ref(recurrent, "V"), 
+                                 "E_post": create_var_ref(recurrent, "E")}
 input_recurrent = model.add_synapse_population(
     "InputRecurrentLIF", "SPARSE" if sparse_input_recurrent else "DENSE", 0,
     input, recurrent,
     init_weight_update(eprop.eprop_lif_deep_r_model if input_recurrent_deep_r else eprop.eprop_lif_model,
                        eprop_deep_r_lif_params if input_recurrent_deep_r else eprop_lif_params,
-                       input_recurrent_vars, eprop_pre_vars, eprop_post_vars),
+                       input_recurrent_vars, eprop_pre_vars, eprop_post_vars,
+                       post_var_refs=input_recurrent_post_var_refs),
     init_postsynaptic("DeltaCurr"),
     input_recurrent_sparse_init)
 
+recurrent_output_post_var_refs = {"E_post": create_var_ref(output, "E")}
 recurrent_output = model.add_synapse_population(
     "RecurrentLIFOutput", "DENSE", 0,
     recurrent, output,
-    init_weight_update(eprop.output_learning_model, recurrent_output_params, recurrent_output_vars, recurrent_output_pre_vars),
+    init_weight_update(eprop.output_learning_model, recurrent_output_params, recurrent_output_vars, recurrent_output_pre_vars,
+                       post_var_refs=recurrent_output_post_var_refs),
     init_postsynaptic("DeltaCurr"))
 recurrent_output.pre_target_var = "ISynFeedback"
 
 recurrent_recurrent_sparse_init = (init_sparse_connectivity("FixedProbability",
                                                             {"prob": args.recurrent_recurrent_sparsity}) if sparse_recurrent_recurrent
                                    else None)
+recurrent_recurrent_post_var_refs = {"RefracTime_post": create_var_ref(recurrent, "RefracTime"),
+                                     "V_post": create_var_ref(recurrent, "V"), 
+                                     "E_post": create_var_ref(recurrent, "E")}
 recurrent_recurrent = model.add_synapse_population(
-    "RecurrentLIFRecurrentLIF", "SPARSE" if sparse_recurrent_recurrent else "DENSE", NO_DELAY,
+    "RecurrentLIFRecurrentLIF", "SPARSE" if sparse_recurrent_recurrent else "DENSE", 0,
     recurrent, recurrent,
     init_weight_update(eprop.eprop_lif_deep_r_model if recurrent_recurrent_deep_r else eprop.eprop_lif_model,
                        eprop_deep_r_lif_params if recurrent_recurrent_deep_r else eprop_lif_params,
-                       recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars),
+                       recurrent_recurrent_vars, eprop_pre_vars, eprop_post_vars,
+                       post_var_refs=recurrent_recurrent_post_var_refs),
     init_postsynaptic("DeltaCurr"),
     recurrent_recurrent_sparse_init)
 
@@ -229,7 +243,7 @@ if args.adam:
     recurrent_output_optimiser.set_param_dynamic("secondMomentScale")
 else:
     recurrent_output_optimiser = model.add_custom_update("recurrent_lif_output_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
-                                                         {}, {}, recurrent_output_optimiser_var_refs)
+                                                         sgd_params, {}, recurrent_output_optimiser_var_refs)
     recurrent_output_optimiser.set_param_dynamic("eta")
 
 
@@ -243,7 +257,7 @@ if input_recurrent_deep_r:
         input_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
-                                                            {}, {}, input_recurrent_optimiser_var_refs)
+                                                            sgd_params, {}, input_recurrent_optimiser_var_refs)
         input_recurrent_optimiser.set_param_dynamic("eta")
 
     input_recurrent_deep_r = DeepR(input_recurrent, input_recurrent_optimiser, NUM_INPUT, NUM_RECURRENT)
@@ -256,7 +270,7 @@ else:
         input_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         input_recurrent_optimiser = model.add_custom_update("input_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
-                                                            {}, {}, input_recurrent_optimiser_var_refs)
+                                                            sgd_params, {}, input_recurrent_optimiser_var_refs)
         input_recurrent_optimiser.set_param_dynamic("eta")
 
 # If we're using Deep-R on recurrent-recurrent connectivity
@@ -269,7 +283,7 @@ if recurrent_recurrent_deep_r:
         recurrent_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_track_dormant_model,
-                                                                {}, {}, recurrent_recurrent_optimiser_var_refs)
+                                                                sgd_params, {}, recurrent_recurrent_optimiser_var_refs)
         recurrent_recurrent_optimiser.set_param_dynamic("eta")
     
     recurrent_recurrent_deep_r = DeepR(recurrent_recurrent, recurrent_recurrent_optimiser, NUM_RECURRENT, NUM_RECURRENT)
@@ -282,7 +296,7 @@ else:
         recurrent_recurrent_optimiser.set_param_dynamic("secondMomentScale")
     else:
         recurrent_recurrent_optimiser = model.add_custom_update("recurrent_recurrent_optimiser", "GradientLearn", eprop.gradient_descent_zero_gradient_model,
-                                                                {}, {}, recurrent_recurrent_optimiser_var_refs)
+                                                                sgd_params, {}, recurrent_recurrent_optimiser_var_refs)
         recurrent_recurrent_optimiser.set_param_dynamic("eta")
     
 
@@ -328,8 +342,8 @@ for trial in range(1000):
             output_y_var.pull_from_device()
             output_y_star_var.pull_var_from_device()
 
-            trial_output_y.append(np.copy(output_y_var.view))
-            trial_output_y_star.append(np.copy(output_y_star_var.view))
+            trial_output_y.append(output_y_var.values)
+            trial_output_y_star.append(output_y_star_var.values)
 
     if record_trial:
         output_y.append(np.vstack(trial_output_y))

@@ -19,10 +19,9 @@ absolute_normal_snippet = create_var_init_snippet(
 # ----------------------------------------------------------------------------
 adam_optimizer_model = create_custom_update_model(
     "adam_optimizer",
-    param_names=["beta1", "beta2", "epsilon"],
+    params=["beta1", "beta2", "epsilon", "alpha", 
+           "firstMomentScale", "secondMomentScale"],
     var_name_types=[("m", "scalar"), ("v", "scalar")],
-    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
-                         ("secondMomentScale", "scalar")],
     var_refs=[("gradient", "scalar", VarAccessMode.READ_ONLY), ("variable", "scalar")],
     update_code="""
     // Update biased first moment estimate
@@ -37,10 +36,10 @@ adam_optimizer_model = create_custom_update_model(
 
 adam_optimizer_track_dormant_model = create_custom_update_model(
     "adam_optimizer_track_dormant",
-    param_names=["beta1", "beta2", "epsilon"],
+    params=["beta1", "beta2", "epsilon", "alpha", 
+            "firstMomentScale", "secondMomentScale"],
     var_name_types=[("m", "scalar"), ("v", "scalar")],
-    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
-                         ("secondMomentScale", "scalar"), ("dormant", "uint32_t*")],
+    extra_global_params=[("dormant", "uint32_t*")],
     var_refs=[("gradient", "scalar", VarAccessMode.READ_ONLY), ("variable", "scalar")],
     update_code="""
     // Update biased first moment estimate
@@ -61,10 +60,9 @@ adam_optimizer_track_dormant_model = create_custom_update_model(
 
 adam_optimizer_zero_gradient_model = create_custom_update_model(
     "adam_optimizer_zero_gradient",
-    param_names=["beta1", "beta2", "epsilon"],
+    params=["beta1", "beta2", "epsilon", "alpha", 
+            "firstMomentScale", "secondMomentScale"],
     var_name_types=[("m", "scalar"), ("v", "scalar")],
-    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
-                         ("secondMomentScale", "scalar")],
     var_refs=[("gradient", "scalar"), ("variable", "scalar")],
     update_code="""
     // Update biased first moment estimate
@@ -82,10 +80,10 @@ adam_optimizer_zero_gradient_model = create_custom_update_model(
 
 adam_optimizer_zero_gradient_track_dormant_model = create_custom_update_model(
     "adam_optimizer_zero_gradient_track_dormant",
-    param_names=["beta1", "beta2", "epsilon"],
+    params=["beta1", "beta2", "epsilon", "alpha", 
+            "firstMomentScale", "secondMomentScale"],
     var_name_types=[("m", "scalar"), ("v", "scalar")],
-    extra_global_params=[("alpha", "scalar"), ("firstMomentScale", "scalar"),
-                         ("secondMomentScale", "scalar"), ("dormant", "uint32_t*")],
+    extra_global_params=[("dormant", "uint32_t*")],
     var_refs=[("gradient", "scalar"), ("variable", "scalar")],
     update_code="""
     // Update biased first moment estimate
@@ -108,7 +106,7 @@ adam_optimizer_zero_gradient_track_dormant_model = create_custom_update_model(
 
 l1_model = create_custom_update_model(
     "l1",
-    param_names=["c"],
+    params=["c"],
     var_refs=[("variable", "scalar")],
     update_code="""
     variable += c;
@@ -116,7 +114,7 @@ l1_model = create_custom_update_model(
     
 gradient_descent_zero_gradient_model = create_custom_update_model(
     "gradient_descent_zero_gradient",
-    extra_global_params=[("eta", "scalar")],
+    params=["eta"],
     var_refs=[("gradient", "scalar"), ("variable", "scalar")],
     update_code="""
     // Descend!
@@ -157,7 +155,7 @@ gradient_batch_reduce_model = create_custom_update_model(
 #----------------------------------------------------------------------------
 recurrent_alif_model = create_neuron_model(
     "recurrent_alif",
-    param_names=["TauM", "TauAdap", "Vthresh", "TauRefrac", "Beta"],
+    params=["TauM", "TauAdap", "Vthresh", "TauRefrac", "Beta"],
     var_name_types=[("V", "scalar"), ("A", "scalar"), ("RefracTime", "scalar"), ("E", "scalar")],
     additional_input_vars=[("ISynFeedback", "scalar", 0.0)],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauM"])),
@@ -183,7 +181,7 @@ recurrent_alif_model = create_neuron_model(
 
 recurrent_lif_model = create_neuron_model(
     "recurrent_lif",
-    param_names=["TauM", "Vthresh", "TauRefrac"],
+    params=["TauM", "Vthresh", "TauRefrac"],
     var_name_types=[("V", "scalar"), ("RefracTime", "scalar"), ("E", "scalar")],
     additional_input_vars=[("ISynFeedback", "scalar", 0.0)],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauM"]))],
@@ -209,7 +207,7 @@ recurrent_lif_model = create_neuron_model(
 #----------------------------------------------------------------------------
 eprop_alif_model = create_weight_update_model(
     "eprop_alif",
-    param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "Vthresh"],
+    params=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "Vthresh"],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauE"])),
                     ("Rho", lambda pars, dt: np.exp(-dt / pars["TauA"])),
                     ("FTargetTimestep", lambda pars, dt: (pars["FTarget"] * dt) / 1000.0),
@@ -264,7 +262,7 @@ eprop_alif_model = create_weight_update_model(
     
 eprop_alif_deep_r_model = create_weight_update_model(
     "eprop_alif_deep_r",
-    param_names=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "Vthresh", ("NumExcitatory", "int")],
+    params=["TauE", "TauA", "CReg", "FTarget", "TauFAvg", "Beta", "Vthresh", ("NumExcitatory", "int")],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauE"])),
                     ("Rho", lambda pars, dt: np.exp(-dt / pars["TauA"])),
                     ("FTargetTimestep", lambda pars, dt: (pars["FTarget"] * dt) / 1000.0),
@@ -322,7 +320,7 @@ eprop_alif_deep_r_model = create_weight_update_model(
 
 eprop_lif_model = create_weight_update_model(
     "eprop_lif",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "Vthresh"],
+    params=["TauE", "CReg", "FTarget", "TauFAvg", "Vthresh"],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauE"])),
                     ("FTargetTimestep", lambda pars, dt: (pars["FTarget"] * dt) / 1000.0),
                     ("AlphaFAv", lambda pars, dt: np.exp(-dt / pars["TauFAvg"]))],
@@ -365,7 +363,7 @@ eprop_lif_model = create_weight_update_model(
 
 eprop_lif_deep_r_model = create_weight_update_model(
     "eprop_lif_deep_r",
-    param_names=["TauE", "CReg", "FTarget", "TauFAvg", "Vthresh", ("NumExcitatory", "int")],
+    params=["TauE", "CReg", "FTarget", "TauFAvg", "Vthresh", ("NumExcitatory", "int")],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauE"])),
                     ("FTargetTimestep", lambda pars, dt: (pars["FTarget"] * dt) / 1000.0),
                     ("AlphaFAv", lambda pars, dt: np.exp(-dt / pars["TauFAvg"]))],
@@ -412,7 +410,7 @@ eprop_lif_deep_r_model = create_weight_update_model(
     
 output_learning_model = create_weight_update_model(
     "output_learning",
-    param_names=["TauE"],
+    params=["TauE"],
     derived_params=[("Alpha", lambda pars, dt: np.exp(-dt / pars["TauE"]))],
     var_name_types=[("g", "scalar", VarAccess.READ_ONLY), ("DeltaG", "scalar")],
     pre_var_name_types=[("ZFilter", "scalar")],
