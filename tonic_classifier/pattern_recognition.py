@@ -49,18 +49,15 @@ input_model = create_neuron_model(
     derived_params=[("TauRefrac", lambda pars, dt: 1000.0 / pars["ActiveRate"])],
 
     sim_code="""
-    const unsigned int neuronGroup = id / GroupSize;
-    const scalar groupStartTime = neuronGroup * ActiveInterval;
-    const scalar groupEndTime = groupStartTime + ActiveInterval;
     if (RefracTime > 0.0) {
-      RefracTime -= DT;
+      RefracTime -= dt;
     }
     """,
     reset_code="""
     RefracTime = TauRefrac;
     """,
     threshold_condition_code="""
-    t > groupStartTime && t < groupEndTime && RefracTime <= 0.0
+    t > ((id / GroupSize) * ActiveInterval) && t < (((id / GroupSize) + 1.0) * ActiveInterval) && RefracTime <= 0.0
     """,
     is_auto_refractory_required=False)
 
@@ -340,7 +337,7 @@ for trial in range(1000):
 
         if record_trial:
             output_y_var.pull_from_device()
-            output_y_star_var.pull_var_from_device()
+            output_y_star_var.pull_from_device()
 
             trial_output_y.append(output_y_var.values)
             trial_output_y_star.append(output_y_star_var.values)

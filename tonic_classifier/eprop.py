@@ -166,7 +166,7 @@ recurrent_alif_model = create_neuron_model(
     V = (Alpha * V) + Isyn;
     A *= Rho;
     if (RefracTime > 0.0) {
-      RefracTime -= DT;
+      RefracTime -= dt;
     }
     """,
     reset_code="""
@@ -190,7 +190,7 @@ recurrent_lif_model = create_neuron_model(
     E = ISynFeedback;
     V = (Alpha * V) + Isyn;
     if (RefracTime > 0.0) {
-      RefracTime -= DT;
+      RefracTime -= dt;
     }
     """,
     reset_code="""
@@ -252,12 +252,12 @@ eprop_alif_model = create_weight_update_model(
     epsilonA = psiZFilter + ((Rho * epsilonA) - psiBetaEpsilonA);
     
     // Calculate filtered version of eligibility trace
-    scalar eFiltered = eFiltered;
-    eFiltered = (eFiltered * Alpha) + e;
+    scalar eF = eFiltered;
+    eF = (eF * Alpha) + e;
     
     // Apply weight update
-    DeltaG += (eFiltered * E_post) + ((FAvg - FTargetTimestep) * CReg * e);
-    eFiltered = eFiltered;
+    DeltaG += (eF * E_post) + ((FAvg - FTargetTimestep) * CReg * e);
+    eFiltered = eF;
     """)
     
 eprop_alif_deep_r_model = create_weight_update_model(
@@ -310,12 +310,12 @@ eprop_alif_deep_r_model = create_weight_update_model(
     epsilonA = psiZFilter + ((Rho * epsilonA) - psiBetaEpsilonA);
 
     // Calculate filtered version of eligibility trace
-    scalar eFiltered = eFiltered;
-    eFiltered = (eFiltered * Alpha) + e;
+    scalar eF = eFiltered;
+    eF = (eF * Alpha) + e;
 
     // Apply weight update
-    DeltaG += sign * ((eFiltered * E_post) + ((FAvg - FTargetTimestep) * CReg * e));
-    eFiltered = eFiltered;
+    DeltaG += sign * ((eF * E_post) + ((FAvg - FTargetTimestep) * CReg * e));
+    eFiltered = eF;
     """)
 
 eprop_lif_model = create_weight_update_model(
@@ -330,7 +330,7 @@ eprop_lif_model = create_weight_update_model(
     post_neuron_var_refs=[("RefracTime_post", "scalar"), ("V_post", "scalar"), ("E_post", "scalar")],
 
     sim_code="""
-    addToInPost(g);
+    addToPost(g);
     """,
 
     pre_spike_code="""
@@ -355,10 +355,10 @@ eprop_lif_model = create_weight_update_model(
 
     synapse_dynamics_code="""
     const scalar e = ZFilter * Psi;
-    scalar eFiltered = eFiltered;
-    eFiltered = (eFiltered * Alpha) + e;
-    DeltaG += (eFiltered * E_post) + ((FAvg - FTargetTimestep) * CReg * e);
-    eFiltered = eFiltered;
+    scalar eF = eFiltered;
+    eF = (eF * Alpha) + e;
+    DeltaG += (eF * E_post) + ((FAvg - FTargetTimestep) * CReg * e);
+    eFiltered = eF;
     """)
 
 eprop_lif_deep_r_model = create_weight_update_model(
@@ -402,10 +402,10 @@ eprop_lif_deep_r_model = create_weight_update_model(
     const float sign = (id_pre < NumExcitatory) ? 1.0 : -1.0;
 
     const scalar e = ZFilter * Psi;
-    scalar eFiltered = eFiltered;
-    eFiltered = (eFiltered * Alpha) + e;
+    scalar eF = eFiltered;
+    eF = (eF * Alpha) + e;
     DeltaG += sign * ((eFiltered * E_post) + ((FAvg - FTargetTimestep) * CReg * e));
-    eFiltered = eFiltered;
+    eFiltered = eF;
     """)
     
 output_learning_model = create_weight_update_model(
